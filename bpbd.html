@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SiagaBanjir · Panel BPBD</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/bpbd.css">
+</head>
+<body class="bpbd">
+  <div class="layout">
+    <aside class="side" aria-label="Menu utama">
+      <div class="brand"><span class="brand-mark" data-icon="waves" data-size="22"></span><div><b>SiagaBanjir</b><span>Panel BPBD</span></div></div>
+      <p class="side-l">Menu utama</p>
+      <nav class="nav">
+        <a href="#dashboard" data-r="dashboard"><span data-icon="dash" data-size="19"></span>Dashboard</a>
+        <a href="#grafik" data-r="grafik"><span data-icon="chart" data-size="19"></span>Grafik monitoring</a>
+        <a href="#peta" data-r="peta"><span data-icon="map" data-size="19"></span>Peta &amp; zona rawan</a>
+        <a href="#laporan" data-r="laporan"><span data-icon="file" data-size="19"></span>Laporan historis</a>
+        <a href="#imbauan" data-r="imbauan"><span data-icon="mega" data-size="19"></span>Kirim imbauan</a>
+        <a href="#notifikasi" data-r="notifikasi"><span data-icon="bell" data-size="19"></span>Notifikasi<span class="cnt" id="nav-count" hidden></span></a>
+      </nav>
+      <div class="side-foot">
+        <div class="src sim" id="src-box"><b><span data-icon="sliders" data-size="14"></span>Mode simulasi</b>Data uji untuk pengujian antarmuka</div>
+        <div class="user"><span class="avatar">PP</span><div><b>Petugas Pusdalops</b><span>BPBD Provinsi Papua</span></div></div>
+      </div>
+    </aside>
+    <main id="view" tabindex="-1"></main>
+  </div>
+  <div id="toasts" aria-live="polite"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/core.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/chart.js"></script>
+  <script src="assets/js/widgets.js"></script>
+  <script src="assets/js/bpbd.js"></script>
+</body>
+</html>

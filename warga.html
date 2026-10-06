@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0E5AA7">
+  <title>SiagaBanjir · Pantau Kali Acai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/warga.css">
+</head>
+<body class="warga">
+  <div class="app">
+    <div class="offline" id="offline-banner" role="status" hidden>
+      <span class="badge"><span data-icon="wifioff" data-size="18"></span></span>
+      <div class="grow"><strong>Tidak ada koneksi internet</strong><p data-k="t"></p></div>
+      <button type="button" class="btn sm" id="retry">Coba lagi</button>
+    </div>
+    <main id="view" tabindex="-1"></main>
+    <nav class="bottom-nav" aria-label="Navigasi utama">
+      <a href="#beranda" data-r="beranda"><span class="ib" data-icon="home" data-size="22"></span>Beranda</a>
+      <a href="#grafik" data-r="grafik"><span class="ib" data-icon="chart" data-size="22"></span>Grafik</a>
+      <a href="#peta" data-r="peta"><span class="ib" data-icon="map" data-size="22"></span>Peta</a>
+      <a href="#riwayat" data-r="riwayat"><span class="ib" data-icon="clock" data-size="22"></span>Riwayat</a>
+      <a href="#menu" data-r="menu"><span class="ib" data-icon="grid" data-size="22"></span>Menu</a>
+    </nav>
+  </div>
+  <div id="toasts" aria-live="polite"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/core.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/chart.js"></script>
+  <script src="assets/js/widgets.js"></script>
+  <script src="assets/js/warga.js"></script>
+</body>
+</html>
