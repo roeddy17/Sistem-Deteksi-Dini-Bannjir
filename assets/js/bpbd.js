@@ -1,4 +1,4 @@
-/* Panel BPBD (web desktop): Dashboard, Grafik, Peta, Laporan, Kirim Imbauan, Notifikasi. */
+/* Panel BPBD (desktop, tablet, dan HP): Dashboard, Grafik, Peta, Laporan, Kirim Imbauan, Notifikasi. */
 (function () {
   const C = SB.config, D = SB.data, F = SB.fmt, S = SB.status, I = SB.icon, ui = SB.ui, esc = ui.esc;
   const th = C.thresholds, HOUR = 3600e3;
@@ -11,9 +11,9 @@
     <header class="topbar">
       <div><h1>${title}</h1><p>${sub}</p></div>
       <div class="tb-r">
-        <span class="chip-live ${sim ? 'is-sim' : ''}"><i></i>${sim ? 'Mode simulasi' : 'Data real-time'}</span>
+        <span class="chip-live ${sim ? 'is-sim' : ''}" title="${sim ? 'Mode simulasi' : 'Data real-time'}"><i></i><span class="cl-t">${sim ? 'Mode simulasi' : 'Data real-time'}</span></span>
         <span class="chip-time">${I('clock', 15)}<span id="tb-time"></span></span>
-        <a class="icon-btn sq" href="#notifikasi" aria-label="Notifikasi">${I('bell', 18)}</a>
+        <a class="icon-btn sq tb-bell" href="#notifikasi" aria-label="Notifikasi">${I('bell', 18)}<span class="cnt" data-cnt hidden></span></a>
       </div>
     </header>`;
   const statCard = (ic, cls, label, id, subId) => `
@@ -25,7 +25,7 @@
 
   /* Kumpulan notifikasi: perubahan status + imbauan */
   function feed() {
-    const ev = D.getEvents().slice(0, 60).map(e => {
+    const ev = D.getEvents().map(e => {
       const up = S.rank(e.to) > S.rank(e.from);
       return { t: e.t, kind: e.to, cls: S.cls(e.to), icon: S.icon(e.to), pill: ui.pill(e.to),
         title: e.to === 'AMAN' ? 'Status kembali AMAN' : (up ? 'Status naik ke ' : 'Status turun ke ') + e.to,
@@ -38,8 +38,8 @@
   if (!localStorage.getItem('sb-bpbd-read')) localStorage.setItem('sb-bpbd-read', String(Date.now() - 6 * HOUR));
   const lastRead = () => +localStorage.getItem('sb-bpbd-read') || 0;
   function paintBadge() {
-    const n = feed().filter(i => i.t > lastRead()).length, b = ui.$('#nav-count');
-    b.textContent = n > 99 ? '99+' : n; b.hidden = !n;
+    const n = feed().filter(i => i.t > lastRead()).length;
+    ui.$$('[data-cnt]').forEach(b => { b.textContent = n > 99 ? '99+' : n; b.hidden = !n; });
   }
 
   /* ================= DASHBOARD ================= */
@@ -113,7 +113,7 @@
     render() {
       main.innerHTML = `${topbar('Grafik monitoring', 'Tren ketinggian air ' + esc(C.sensorName))}
         <div class="toolbar">${seg(RANGES, this.hours)}<span class="sub sm row-c">${I('cal', 16)}<span id="g-range"></span></span><span class="grow"></span>
-          <button type="button" class="btn" id="g-dl">${I('dl', 16)}Unduh grafik</button></div>
+          <button type="button" class="btn" id="g-dl" aria-label="Unduh grafik">${I('dl', 16)}<span class="bl">Unduh grafik</span></button></div>
         <div class="stats4">
           ${statCard('up', 'dg', 'Tertinggi', 'g-max', 'g-max-s')}
           ${statCard('down', 'ok', 'Terendah', 'g-min', 'g-min-s')}
@@ -231,7 +231,7 @@
       const rows = this.rows(), pages = Math.max(1, Math.ceil(rows.length / this.per));
       this.page = Math.min(this.page, pages - 1);
       const slice = rows.slice(this.page * this.per, (this.page + 1) * this.per);
-      ui.$('#r-body').innerHTML = slice.map(r => `<tr><td>${F.dateNum(r.t)}</td><td>${F.time(r.t)}</td><td><strong>${F.level(r.v)}</strong></td><td>${ui.pill(r.s)}</td><td class="sub">${r.note || '—'}</td></tr>`).join('')
+      ui.$('#r-body').innerHTML = slice.map(r => `<tr><td class="c-d">${F.dateNum(r.t)}</td><td class="c-t">${F.time(r.t)}</td><td class="c-v"><strong>${F.level(r.v)}</strong></td><td class="c-s">${ui.pill(r.s)}</td><td class="c-n sub${r.note ? '' : ' none'}">${r.note || '—'}</td></tr>`).join('')
         || '<tr><td colspan="5" class="empty-s">Tidak ada data untuk filter ini.</td></tr>';
       ui.$('#r-info').textContent = rows.length ? `Menampilkan ${this.page * this.per + 1}–${this.page * this.per + slice.length} dari ${rows.length.toLocaleString('id-ID')} baris` : '';
       const btns = []; const add = (lab, p, dis, cur) => btns.push(`<button type="button" class="pgb${cur ? ' cur' : ''}" data-p="${p}" ${dis ? 'disabled' : ''} aria-label="Halaman ${p + 1}">${lab}</button>`);
@@ -312,16 +312,23 @@
   };
 
   /* ================= NOTIFIKASI ================= */
+  /* Satu hari per tampilan (default hari ini); daftar bergulir di dalam kartu, layar utama tetap diam */
   const notifikasi = {
-    filter: 'SEMUA', q: '',
+    filter: 'SEMUA', q: '', day: null, lock: true,
     render() {
       main.innerHTML = `${topbar('Notifikasi', 'Riwayat perubahan status dan imbauan yang terkirim')}
-        <div class="toolbar"><div class="chips" id="n-chips" role="group" aria-label="Saring notifikasi"></div><span class="grow"></span>
+        <div class="toolbar n-tools">
+          <div class="chips" id="n-chips" role="group" aria-label="Saring notifikasi"></div>
+          <div id="n-dp"></div>
+          <span class="grow"></span>
           <label class="field search">${I('search', 16)}<input id="n-q" placeholder="Cari notifikasi" aria-label="Cari notifikasi"></label>
-          <button type="button" class="btn" id="n-read">${I('checks', 16)}Tandai semua dibaca</button></div>
-        <div class="cols">
-          <article class="card list pad-y0 feed-d" id="n-list"></article>
-          <div class="col-side">
+          <button type="button" class="btn" id="n-read" aria-label="Tandai semua dibaca">${I('checks', 16)}<span class="bl">Tandai semua dibaca</span></button>
+          <button type="button" class="btn n-set-btn" id="n-set" aria-expanded="false" aria-controls="n-side" aria-label="Pengaturan notifikasi">${I('sliders', 16)}<span class="bl">Pengaturan</span></button>
+        </div>
+        <div class="cols n-cols" id="n-cols">
+          <article class="card list pad-y0 feed-d scroll-card" id="n-list" tabindex="0" aria-label="Daftar notifikasi"></article>
+          <div class="col-side n-side" id="n-side">
+            <div class="row-sb sheet-h"><h2 class="h2 lg">Pengaturan</h2><button type="button" class="icon-x" id="n-close" aria-label="Tutup pengaturan">${I('x', 20)}</button></div>
             <article class="card"><div class="row-c"><span class="c-pri">${I('sliders', 18)}</span><h2 class="h2">Pengaturan notifikasi</h2></div>
               <div class="set-row"><span class="badge b-dg">${I('vol', 16)}</span><div class="grow"><strong class="sm">Bunyi peringatan</strong><p class="muted sm">Bunyi dan getar untuk Siaga dan Bahaya</p></div><label class="switch-wrap"><input type="checkbox" id="n-sound" ${SB.notify.soundOn() ? 'checked' : ''}><span class="switch"></span></label></div>
               <div class="set-row"><span class="badge b-pri">${I('bell', 16)}</span><div class="grow"><strong class="sm">Notifikasi browser</strong><p class="muted sm" id="n-perm"></p></div><button type="button" class="btn sm" id="n-allow">Izinkan</button></div>
@@ -330,38 +337,47 @@
               ${[['AMAN', `≤ ${th.siaga} ${C.unit}`, 'notifikasi biasa'], ['SIAGA', `${th.siaga} – ${th.bahaya} ${C.unit}`, 'bunyi + getar'], ['BAHAYA', `≥ ${th.bahaya} ${C.unit}`, 'bunyi + getar']].map(([s, r, n]) => `<div class="thr">${ui.pill(s)}<strong class="grow">${r}</strong><span class="sm ${s === 'AMAN' ? 'muted' : 'c-dg'}">${n}</span></div>`).join('')}
             </article>
           </div>
+          <div class="n-backdrop" id="n-bd"></div>
         </div>`;
-      ui.$('#n-q').oninput = e => { this.q = e.target.value.toLowerCase(); this.paint(); };
+      this.dp = SB.dayPicker(ui.$('#n-dp'), { day: this.day, days: 30, onChange: d => { this.day = d; this.paint(true); } });
+      ui.$('#n-q').oninput = e => { this.q = e.target.value.toLowerCase(); this.paint(true); };
       ui.$('#n-read').onclick = () => { localStorage.setItem('sb-bpbd-read', String(Date.now())); this.paint(); paintBadge(); };
       ui.$('#n-sound').onchange = e => localStorage.setItem('sb-sound', e.target.checked ? 'on' : 'off');
       const perm = () => { const p = SB.notify.permission(); ui.$('#n-perm').textContent = p === 'granted' ? 'Aktif di browser ini' : p === 'unsupported' ? 'Tidak didukung browser ini' : 'Belum diizinkan'; ui.$('#n-allow').hidden = p === 'granted' || p === 'unsupported'; };
       ui.$('#n-allow').onclick = async () => { await SB.notify.request(); perm(); };
-      perm(); this.paint();
+      /* tablet & HP: pengaturan tampil sebagai lembar dari bawah */
+      const sheet = open => { ui.$('#n-cols').classList.toggle('show-set', open); ui.$('#n-set').setAttribute('aria-expanded', String(open)); };
+      ui.$('#n-set').onclick = () => sheet(!ui.$('#n-cols').classList.contains('show-set'));
+      ui.$('#n-close').onclick = ui.$('#n-bd').onclick = () => sheet(false);
+      perm(); this.paint(true);
     },
-    paint() {
-      const all = feed(), read = lastRead();
+    paint(top) {
+      const read = lastRead(), [from, to] = this.dp.range();
+      const all = feed().filter(i => i.t >= from && i.t < to);
       const counts = { SEMUA: all.length }; all.forEach(i => counts[i.kind] = (counts[i.kind] || 0) + 1);
       const chips = [['SEMUA', 'Semua', ''], ['BAHAYA', 'Bahaya', 'dg'], ['SIAGA', 'Siaga', 'wr'], ['AMAN', 'Aman', 'ok'], ['IMBAUAN', 'Imbauan', 'pri']];
       ui.$('#n-chips').innerHTML = chips.map(([k, l, c]) => `<button type="button" class="chip" data-f="${k}" aria-pressed="${k === this.filter}">${c ? `<i class="dot bg-${c}"></i>` : ''}${l}<em>${counts[k] || 0}</em></button>`).join('');
-      ui.$$('#n-chips .chip').forEach(b => b.onclick = () => { this.filter = b.dataset.f; this.paint(); });
+      ui.$$('#n-chips .chip').forEach(b => b.onclick = () => { this.filter = b.dataset.f; this.paint(true); });
       const items = all.filter(i => (this.filter === 'SEMUA' || i.kind === this.filter) && (!this.q || (i.title + ' ' + i.desc).toLowerCase().includes(this.q)));
-      if (!items.length) { ui.$('#n-list').innerHTML = '<p class="empty">Tidak ada notifikasi yang cocok.</p>'; return; }
-      const groups = {}; items.slice(0, 50).forEach(i => { const k = F.dayLabel(i.t); (groups[k] = groups[k] || []).push(i); });
-      ui.$('#n-list').innerHTML = Object.entries(groups).map(([d, list]) => `<p class="group-l in">${d}</p>` + list.map(i => `
+      const box = ui.$('#n-list');
+      box.innerHTML = items.length ? items.map(i => `
         <div class="li ai-c nrow${i.t > read ? ' unread' : ''}"><span class="badge b-${i.cls} lg">${I(i.icon, 18)}</span>
-          <div class="grow"><strong>${i.title}</strong>${i.t > read ? '<i class="u-dot" aria-label="belum dibaca"></i>' : ''}<p class="sub sm">${esc(i.desc)}</p></div>${i.pill}<span class="muted sm tm">${F.time(i.t)}</span></div>`).join('')).join('');
+          <div class="grow"><strong>${i.title}</strong>${i.t > read ? '<i class="u-dot" aria-label="belum dibaca"></i>' : ''}<p class="sub sm">${esc(i.desc)}</p></div>${i.pill}<span class="muted sm tm">${F.time(i.t)}</span></div>`).join('')
+        : `<p class="empty">Tidak ada notifikasi ${all.length ? 'yang cocok ' : ''}pada ${this.dp.isToday() ? 'hari ini' : 'tanggal ini'}.</p>`;
+      if (top) box.scrollTop = 0;
     },
-    update(snap, extra) { if (extra && extra.changed) this.paint(); }
+    update(snap, extra) { if (extra && extra.changed && this.dp.isToday()) this.paint(); }
   };
 
   /* ================= ROUTER & DATA ================= */
   const views = { dashboard, grafik, peta, laporan, imbauan, notifikasi };
   ui.router(Object.keys(views), 'dashboard', name => {
     active = views[name];
+    document.body.classList.toggle('lock', !!active.lock);
     ui.$$('.nav a').forEach(a => a.dataset.r === name ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
     active.render();
     active.update(snapNow(), {});
-    tick();
+    tick(); paintBadge();
     window.scrollTo(0, 0);
   });
 

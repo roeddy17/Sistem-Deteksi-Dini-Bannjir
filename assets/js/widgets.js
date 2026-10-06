@@ -99,6 +99,47 @@
     return { toast, request, permission, alertStatus, alertImbauan, soundOn };
   })();
 
+  /* ---------- Pemilih hari: ‹ [kalender · Hari ini] › ----------
+     Daftar riwayat/notifikasi hanya menampilkan satu hari. Hari berikutnya
+     tidak bisa melewati hari ini, hari sebelumnya dibatasi `days` hari ke belakang. */
+  SB.dayPicker = function (el, o) {
+    const DAY = 864e5, F = SB.fmt, pad = n => String(n).padStart(2, '0');
+    const today = () => SB.startOfDay(Date.now());
+    const min = () => today() - (o.days || 30) * DAY;
+    const iso = t => { const d = new Date(t); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+    const clampDay = t => Math.max(min(), Math.min(today(), SB.startOfDay(t)));
+    let day = clampDay(o.day != null ? o.day : Date.now());
+
+    el.classList.add('daypick');
+    el.setAttribute('role', 'group'); el.setAttribute('aria-label', 'Pilih hari');
+    el.innerHTML = `<button type="button" class="dp-b" data-d="-1" aria-label="Hari sebelumnya">${I('back', 16)}</button>
+      <button type="button" class="dp-cur" aria-label="Pilih tanggal">${I('cal', 16)}<span data-k="l"></span><input type="date" tabindex="-1" aria-hidden="true"></button>
+      <button type="button" class="dp-b" data-d="1" aria-label="Hari berikutnya">${I('chev', 16)}</button>`;
+    const input = el.querySelector('input'), cur = el.querySelector('.dp-cur');
+
+    function paint() {
+      const rel = F.dayLabel(day);
+      el.querySelector('[data-k=l]').textContent = rel === 'Hari ini' || rel === 'Kemarin' ? `${rel}, ${F.date(day)}` : rel;
+      input.min = iso(min()); input.max = iso(today()); input.value = iso(day);
+      el.querySelector('[data-d="-1"]').disabled = day <= min();
+      el.querySelector('[data-d="1"]').disabled = day >= today();
+    }
+    function set(t) {
+      const n = clampDay(t); paint();
+      if (n === day) return;
+      day = n; paint(); o.onChange(day);
+    }
+    el.querySelectorAll('.dp-b').forEach(b => b.onclick = () => set(day + (+b.dataset.d) * DAY + DAY / 2));
+    cur.onclick = () => { try { input.showPicker(); } catch (e) { input.style.pointerEvents = 'auto'; input.focus(); input.click(); } };
+    input.onchange = () => {
+      if (!input.value) return;
+      const [y, m, d] = input.value.split('-').map(Number);
+      set(new Date(y, m - 1, d).getTime());
+    };
+    paint();
+    return { get: () => day, set, range: () => [day, day + DAY], isToday: () => day === today() };
+  };
+
   /* ---------- Panel simulator (hanya pada mode simulasi) ---------- */
   SB.mountSimPanel = function () {
     if (SB.data.kind !== 'simulasi') return;

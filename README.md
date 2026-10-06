@@ -3,8 +3,10 @@
 Implementasi antarmuka web untuk **Prototype Sistem Deteksi Dini Banjir Berbasis IoT** (tahap *Design Solutions*, metode UCD).
 Dibangun dengan HTML, CSS, dan JavaScript tanpa framework, mengikuti mockup dan Design System di Figma.
 
-- `warga.html` — web responsif untuk HP (masyarakat sekitar Kali Acai)
-- `bpbd.html` — panel web desktop untuk BPBD Provinsi Papua
+- `warga.html` — web responsif untuk HP (masyarakat sekitar Kali Acai); menyesuaikan HP kecil (320 px) sampai tablet
+- `bpbd.html` — panel web BPBD Provinsi Papua: sidebar penuh di desktop, rail ikon di tablet (768–1100 px), navigasi bawah di HP (< 768 px)
+
+Halaman **Riwayat** (warga) dan **Notifikasi** (BPBD) menampilkan satu hari per tampilan (bawaan: hari ini). Gunakan pemilih hari (‹ kalender ›) untuk melihat hari lain, maksimal 30 hari ke belakang dan tidak bisa melewati hari ini. Daftar bergulir di dalam kartu, sedangkan layar utama tetap diam.
 - `index.html` — halaman pilihan tampilan
 
 ## Cara menjalankan
@@ -50,13 +52,13 @@ Ambang batas mengikuti prototipe Oktavian et al. (2026). Status dihitung dari ni
 ```
 assets/
   css/  base.css    token & komponen bersama (Design System)
-        warga.css   tata letak web mobile
-        bpbd.css    tata letak panel desktop (+ gaya cetak laporan)
+        warga.css   tata letak web warga (HP → tablet)
+        bpbd.css    tata letak panel BPBD desktop/tablet/HP (+ gaya cetak laporan)
   js/   config.js   konfigurasi
         core.js     logika status, format waktu/angka, ikon, router
         data.js     lapisan data: simulator, statistik, imbauan
         chart.js    grafik SVG (zona, ambang, tooltip, unduh PNG)
-        widgets.js  peta ilustrasi, notifikasi, panel simulator
+        widgets.js  peta ilustrasi, notifikasi, pemilih hari, panel simulator
         warga.js    layar warga
         bpbd.js     layar BPBD
 ```
