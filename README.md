@@ -19,7 +19,9 @@ Halaman **Riwayat** (warga) dan **Notifikasi** (BPBD) menampilkan satu hari per 
 python -m http.server 8000
 ```
 
-lalu buka `http://localhost:8000` di browser. Untuk mencoba dari HP, sambungkan HP ke WiFi yang sama dan buka `http://<IP-laptop>:8000/warga.html`.
+lalu buka `http://localhost:8000` di browser.
+
+Jika perubahan kode belum terlihat, tekan **Ctrl+F5** (atau Ctrl+Shift+R) untuk memuat ulang tanpa cache. Setiap kali CSS/JS diubah, naikkan angka versi `?v=` pada tautan berkas di `index.html`, `warga.html`, dan `bpbd.html` agar browser mengambil berkas terbaru. Untuk mencoba dari HP, sambungkan HP ke WiFi yang sama dan buka `http://<IP-laptop>:8000/warga.html`.
 
 ## Mode simulasi
 
