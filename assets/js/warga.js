@@ -184,7 +184,7 @@
 
   /* ================= RIWAYAT ================= */
   function feedItems() {
-    const ev = D.getEvents().slice(0, 40).map(e => {
+    const ev = D.getEvents().map(e => {
       const up = S.rank(e.to) > S.rank(e.from);
       return {
         t: e.t, kind: e.to, pill: ui.pill(e.to), cls: S.cls(e.to), icon: S.icon(e.to),
@@ -195,30 +195,32 @@
     const im = SB.imbauan.sent().map(i => ({ t: i.t, kind: 'IMBAUAN', pill: ui.tag('IMBAUAN', 'pri'), cls: 'pri', icon: 'mega', title: 'Imbauan BPBD', desc: i.isi }));
     return ev.concat(im).sort((a, b) => b.t - a.t);
   }
+  /* Satu hari per tampilan; daftar bergulir di dalam kartu, layar utama tetap diam */
   const riwayat = {
-    filter: 'SEMUA',
+    filter: 'SEMUA', day: null, lock: true,
     render(q) {
       if (q && q.get('f') === 'imbauan') this.filter = 'IMBAUAN';
       const chips = [['SEMUA', 'Semua'], ['BAHAYA', 'Bahaya'], ['SIAGA', 'Siaga'], ['IMBAUAN', 'Imbauan']];
       view.innerHTML = `<header class="top"><div><h1 class="h1">Riwayat</h1><p class="sub">Perubahan status &amp; imbauan BPBD</p></div></header>
         <div class="chips" role="group" aria-label="Saring riwayat">${chips.map(([k, l]) => `<button type="button" class="chip" data-f="${k}" aria-pressed="${k === this.filter}">${l}</button>`).join('')}</div>
-        <div id="feed" class="feed"></div>`;
+        <div class="row-sb"><div id="dp"></div><span class="feed-count" id="feed-n"></span></div>
+        <article class="card list pad-y0 scroll-card" id="feed" tabindex="0" aria-label="Daftar riwayat"></article>`;
       ui.$$('.chip').forEach(b => b.onclick = () => { this.filter = b.dataset.f; ui.$$('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === b))); this.paint(); });
-      this.paint();
+      this.dp = SB.dayPicker(ui.$('#dp'), { day: this.day, days: 30, onChange: d => { this.day = d; this.paint(true); } });
+      this.paint(true);
     },
-    paint() {
-      const items = feedItems().filter(i => this.filter === 'SEMUA' || i.kind === this.filter);
-      if (!items.length) { ui.$('#feed').innerHTML = `<p class="empty">Belum ada riwayat untuk kategori ini.</p>`; return; }
-      const groups = {};
-      items.forEach(i => { const k = F.dayLabel(i.t); (groups[k] = groups[k] || []).push(i); });
-      ui.$('#feed').innerHTML = Object.entries(groups).map(([day, list]) => `
-        <p class="group-l">${day}</p>
-        <article class="card list pad-y0">${list.map(i => `
+    paint(top) {
+      const [from, to] = this.dp.range(), box = ui.$('#feed');
+      const items = feedItems().filter(i => i.t >= from && i.t < to && (this.filter === 'SEMUA' || i.kind === this.filter));
+      ui.$('#feed-n').textContent = items.length ? items.length + ' kejadian' : '';
+      box.innerHTML = items.length ? items.map(i => `
           <div class="li"><span class="badge b-${i.cls} lg">${I(i.icon, 18)}</span>
             <div class="grow"><div class="row-sb"><strong>${i.title}</strong><span class="muted sm">${F.time(i.t)}</span></div>
-            <p class="sub sm">${esc(i.desc)}</p>${i.pill}</div></div>`).join('')}</article>`).join('');
+            <p class="sub sm">${esc(i.desc)}</p>${i.pill}</div></div>`).join('')
+        : `<p class="empty">Tidak ada riwayat ${this.filter === 'SEMUA' ? '' : 'kategori ini '}pada ${this.dp.isToday() ? 'hari ini' : 'tanggal ini'}.</p>`;
+      if (top) box.scrollTop = 0;
     },
-    update(snap, extra) { if (extra && extra.changed) this.paint(); }
+    update(snap, extra) { if (extra && extra.changed && this.dp.isToday()) this.paint(); }
   };
 
   /* ================= MENU ================= */
@@ -259,6 +261,7 @@
   const views = { beranda, grafik, peta, riwayat, menu };
   ui.router(Object.keys(views), 'beranda', (name, q) => {
     active = views[name];
+    document.body.classList.toggle('lock', !!active.lock);
     active.render(q);
     ui.$$('.bottom-nav a').forEach(a => a.dataset.r === name ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
     paintNow({});
