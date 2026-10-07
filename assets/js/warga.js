@@ -157,8 +157,9 @@
     sedang: 'Lokasi ini termasuk zona bahaya banjir SEDANG. Tetap waspada saat status Siaga atau Bahaya.',
     rendah: 'Lokasi ini termasuk zona bahaya banjir RENDAH. Tetap pantau informasi dari BPBD.'
   };
+  const POI_HINT = { zoom: 'Perbesar peta untuk melihat tempat.', loading: 'Memuat tempat…', error: 'Data tempat tidak dapat dimuat.', ok: 'Data tempat: OpenStreetMap' };
   const peta = {
-    zones: true, base: null, lm: null, test: false,
+    zones: true, poi: true, base: null, lm: null, test: false,
     render() {
       const P = SB.peta, live = P && P.available();
       const sim = D.kind === 'simulasi';
@@ -166,11 +167,13 @@
         <div class="map map-m" id="map">
           ${live ? '<div class="lmap" id="lmap"></div>' : '<div class="map-svg" id="map-svg"></div>'}
           <button type="button" class="map-chip" id="zone-t" aria-pressed="${this.zones}">${I('layers', 15)}Zona rawan<span class="sw"><i></i></span></button>
+          ${live && C.map.poi && C.map.poi.url ? `<button type="button" class="map-chip poi-t" id="poi-t" aria-pressed="${this.poi}">${I('pin', 15)}Tempat<span class="sw"><i></i></span></button>` : ''}
           ${live ? `<div class="map-base" role="group" aria-label="Jenis peta">${Object.entries(P.BASE).map(([k, b]) => `<button type="button" data-b="${k}">${b.label}</button>`).join('')}</div>
           <button type="button" class="map-fab" id="loc-btn" aria-label="Lokasi saya" title="Lokasi saya">${I('locate', 20)}</button>` : ''}
           <p class="map-note" id="map-note">${live ? 'Memuat data zona…' : 'Ilustrasi · rencana titik pemasangan sensor'}</p>
         </div>
         <div class="legend" id="legend" ${this.zones ? '' : 'hidden'}><span class="muted">Indeks InaRISK:</span>${C.zoneIndex.map(z => `<span class="lg lg-${z.key}">${z.label} ${z.range}</span>`).join('')}</div>
+        ${live && C.map.poi && C.map.poi.url ? `<div class="legend poi-legend" id="poi-legend" ${this.poi ? '' : 'hidden'}>${SB.peta.POI_CAT.map(c => `<span class="lg-poi" style="--c:${c.col}"><i>${I(c.icon, 10)}</i>${c.label}</span>`).join('')}<span class="muted" id="poi-hint"></span></div>` : ''}
         ${live ? `<article class="card loc-res" id="loc-res">
           <div class="row-c"><span class="badge b-pri lg" id="lr-ic">${I('locate', 20)}</span>
             <div class="grow"><h2 class="h2" id="lr-t">Cek zona di lokasi Anda</h2><p class="sub sm" id="lr-d">Ketuk tombol di bawah untuk melihat apakah lokasi Anda berada di zona rawan banjir.</p></div></div>
@@ -193,8 +196,11 @@
         zones: this.zones, inarisk: this.zones, base: this.base,
         onZones: info => { this.zinfo = info; this.paintNote(); },
         onLayers: st => { this.lst = st; this.paintNote(); },
+        poi: this.poi, onPoi: st => { const h = ui.$('#poi-hint'); if (h) h.textContent = POI_HINT[st] || ''; },
         onLocate: r => this.paintLoc(r)
       });
+      const pt = ui.$('#poi-t');
+      if (pt) pt.onclick = () => { this.poi = !this.poi; pt.setAttribute('aria-pressed', String(this.poi)); ui.$('#poi-legend').hidden = !this.poi; lm.setPoi(this.poi); };
       const paintBase = () => ui.$$('.map-base button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.b === lm.base())));
       ui.$$('.map-base button').forEach(b => b.onclick = () => { lm.setBase(b.dataset.b); this.base = b.dataset.b; paintBase(); });
       paintBase();

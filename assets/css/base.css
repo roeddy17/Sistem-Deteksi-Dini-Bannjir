@@ -186,6 +186,13 @@ button { cursor: pointer; }
 .pp { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--tx2); min-width: 160px; }
 .pp strong { color: var(--tx); font-size: 13px; }
 .pp a { color: var(--pri); font-weight: 600; margin-top: 2px; }
+/* tempat penting (OpenStreetMap) */
+.poi { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; transform: translateY(0); }
+.poi i { width: 22px; height: 22px; border-radius: 50%; background: var(--c); color: #fff; display: grid; place-items: center; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(15, 23, 42, .35); flex: none; }
+.poi b { display: none; font-size: 11px; font-weight: 700; color: var(--c); text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff, 0 0 4px #fff; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+.poi-labels .poi b { display: block; }
+.poi-place { display: block; white-space: nowrap; font-size: 12px; font-weight: 700; font-style: italic; color: #334155; text-transform: uppercase; letter-spacing: .04em; text-shadow: 0 0 2px #fff, 0 0 3px #fff, 0 0 4px #fff; pointer-events: none; }
+.map .map-chip.poi-t { top: 100px; }
 .pp-w { display: flex; gap: 4px; align-items: flex-start; color: var(--tx); font-weight: 500; }
 .pp-w .ic { margin-top: 2px; color: var(--pri); }
 .map-chip { position: absolute; left: 12px; top: 12px; display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 0; border-radius: 18px; padding: 7px 10px 7px 12px; font-weight: 600; font-size: 12px; box-shadow: var(--sh); }

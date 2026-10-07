@@ -67,7 +67,9 @@ Pada dialog cetak pilih **Simpan sebagai PDF**, kertas **A4**, margin **Default*
 
 ## Peta zona rawan
 
-Halaman Peta (warga dan BPBD) memakai **Leaflet** (library JavaScript peta, disimpan di `assets/vendor/leaflet`) dengan peta dasar gratis tanpa API key: citra satelit Esri dan OpenStreetMap. Fitur:
+Halaman Peta (warga dan BPBD) memakai **Leaflet** (library JavaScript peta, disimpan di `assets/vendor/leaflet`) dengan peta dasar gratis tanpa API key: **Jalan** (OpenStreetMap, bawaan; nama jalan, kampung, dan tempat), **Hybrid** (citra satelit Esri + nama jalan dan tempat), dan **Satelit**. Fitur:
+
+- **tempat penting** dari OpenStreetMap (Overpass API): fasilitas kesehatan, pendidikan, tempat ibadah, kantor pemerintahan/polisi, kafe & restoran, penginapan, pasar/bank, serta nama kampung; dimuat untuk area yang terlihat mulai zoom 15, nama tampil mulai zoom 17; ketuk ikon untuk jenis tempat dan rute Google Maps. Kelengkapan data bergantung pada kontribusi OpenStreetMap di wilayah tersebut;
 
 - **indeks bahaya banjir resmi InaRISK (BNPB)**, dibaca langsung dari layanan ArcGIS publik `gis.bnpb.go.id` sehingga selalu sama dengan peta InaRISK; ketuk titik di peta untuk melihat nilai indeksnya;
 - batas administrasi (BNPB); ketuk peta atau cek lokasi juga menampilkan **nama wilayah** (kelurahan/kampung, distrik, kota/kabupaten, provinsi) dari layanan yang sama;

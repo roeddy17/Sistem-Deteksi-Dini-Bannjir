@@ -61,6 +61,11 @@ body.warga.lock .sim-fab { bottom: calc(var(--nav-h) + 24px); }
 .sheet { border-radius: 22px; gap: 12px; }
 
 
+/* legenda tempat penting */
+.poi-legend { gap: 6px 10px; }
+.lg-poi { display: inline-flex; align-items: center; gap: 5px; color: var(--tx2); }
+.lg-poi i { width: 16px; height: 16px; border-radius: 50%; background: var(--c); color: #fff; display: grid; place-items: center; }
+
 /* hasil cek lokasi */
 .loc-res { gap: 12px; }
 .loc-act { display: flex; flex-wrap: wrap; gap: 8px; }

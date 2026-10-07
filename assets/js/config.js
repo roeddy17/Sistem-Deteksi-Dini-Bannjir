@@ -72,7 +72,10 @@ SB.config = {
     sensor: { lat: -2.6025, lng: 140.6690 },   // PERKIRAAN titik sensor di Kali Acai — ganti dengan koordinat asli
     sensorApprox: true,                        // true = tampilkan keterangan "titik perkiraan"
     zoom: 15,
-    basemap: 'hybrid',                         // 'hybrid' (satelit + nama tempat), 'satelit', atau 'jalan'
+    basemap: 'jalan',                          // 'jalan' (OpenStreetMap: nama jalan, kampung, tempat), 'hybrid' (satelit + label), 'satelit'
+    /* Tempat penting (fasilitas kesehatan, sekolah, ibadah, kafe, hotel, dll.) dari OpenStreetMap via Overpass API.
+       Dimuat untuk area yang terlihat saat peta di-zoom cukup dekat (minZoom). Kosongkan url untuk mematikan. */
+    poi: { url: 'https://overpass-api.de/api/interpreter', minZoom: 15, labelZoom: 17 },
 
     arcgisLayerUrl: '',                        // contoh: https://services.arcgis.com/xxx/arcgis/rest/services/Bahaya_Banjir/FeatureServer/0
     myMapsId: '',                              // nilai "mid=" pada tautan My Maps

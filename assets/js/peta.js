@@ -237,12 +237,92 @@
 
   /* ---------- Peta ---------- */
   const BASE = {
+    jalan: { label: 'Jalan', layers: [['https://tile.openstreetmap.org/{z}/{x}/{y}.png', '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', 19]] },
     hybrid: { label: 'Hybrid', layers: [
       ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 'Citra &copy; Esri, Maxar, Earthstar Geographics'],
+      ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', 'Jalan &copy; Esri'],
       ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', 'Label &copy; Esri']] },
-    satelit: { label: 'Satelit', layers: [['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 'Citra &copy; Esri, Maxar, Earthstar Geographics']] },
-    jalan: { label: 'Jalan', layers: [['https://tile.openstreetmap.org/{z}/{x}/{y}.png', '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>']] }
+    satelit: { label: 'Satelit', layers: [['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 'Citra &copy; Esri, Maxar, Earthstar Geographics']] }
   };
+
+  /* ---------- Tempat penting dari OpenStreetMap (Overpass API) ---------- */
+  const POI_CAT = [
+    { key: 'kes', label: 'Kesehatan', icon: 'plus', col: '#DC2626', test: t => /^(hospital|clinic|doctors|pharmacy|dentist)$/.test(t.amenity) },
+    { key: 'edu', label: 'Pendidikan', icon: 'book', col: '#2563EB', test: t => /^(school|university|college|kindergarten)$/.test(t.amenity) },
+    { key: 'ibadah', label: 'Tempat ibadah', icon: 'worship', col: '#7C3AED', test: t => t.amenity === 'place_of_worship' },
+    { key: 'gov', label: 'Pemerintahan & keamanan', icon: 'landmark', col: '#475569', test: t => /^(townhall|police|fire_station|post_office|community_centre)$/.test(t.amenity) || t.office === 'government' },
+    { key: 'makan', label: 'Kafe & restoran', icon: 'cup', col: '#EA580C', test: t => /^(restaurant|cafe|fast_food|food_court)$/.test(t.amenity) },
+    { key: 'inap', label: 'Penginapan', icon: 'bed', col: '#0D9488', test: t => /^(hotel|guest_house|motel|hostel)$/.test(t.tourism) },
+    { key: 'belanja', label: 'Belanja & bank', icon: 'cart', col: '#16A34A', test: t => /^(marketplace|bank)$/.test(t.amenity) || /^(supermarket|mall|convenience|department_store)$/.test(t.shop) }
+  ];
+  const POI_TYPE = { hospital: 'Rumah sakit', clinic: 'Klinik / puskesmas', doctors: 'Praktik dokter', pharmacy: 'Apotek', dentist: 'Dokter gigi',
+    school: 'Sekolah', university: 'Universitas', college: 'Perguruan tinggi', kindergarten: 'TK / PAUD', townhall: 'Kantor pemerintahan',
+    police: 'Kantor polisi', fire_station: 'Pemadam kebakaran', post_office: 'Kantor pos', community_centre: 'Balai warga', government: 'Kantor pemerintahan',
+    restaurant: 'Restoran', cafe: 'Kafe', fast_food: 'Rumah makan cepat saji', food_court: 'Pujasera', hotel: 'Hotel', guest_house: 'Penginapan',
+    motel: 'Motel', hostel: 'Hostel', marketplace: 'Pasar', bank: 'Bank', supermarket: 'Supermarket', mall: 'Pusat perbelanjaan',
+    convenience: 'Minimarket', department_store: 'Toserba' };
+  const RELIGION = { muslim: 'Masjid / musala', christian: 'Gereja', hindu: 'Pura', buddhist: 'Vihara', confucian: 'Kelenteng' };
+  function poiType(t) {
+    if (t.amenity === 'place_of_worship') return RELIGION[t.religion] || 'Tempat ibadah';
+    return POI_TYPE[t.amenity] || POI_TYPE[t.tourism] || POI_TYPE[t.shop] || POI_TYPE[t.office] || 'Tempat';
+  }
+  function poiQuery(b) {
+    const bb = `${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}`;
+    return `[out:json][timeout:20];(`
+      + `nwr["name"]["amenity"~"^(hospital|clinic|doctors|pharmacy|dentist|school|university|college|kindergarten|place_of_worship|townhall|police|fire_station|post_office|community_centre|restaurant|cafe|fast_food|food_court|marketplace|bank)$"](${bb});`
+      + `nwr["name"]["tourism"~"^(hotel|guest_house|motel|hostel)$"](${bb});`
+      + `nwr["name"]["shop"~"^(supermarket|mall|convenience|department_store)$"](${bb});`
+      + `nwr["name"]["office"="government"](${bb});`
+      + `node["name"]["place"~"^(suburb|village|neighbourhood|hamlet|quarter)$"](${bb});`
+      + `);out center 400;`;
+  }
+  /* Lapisan tempat penting: dimuat per area terlihat, disimpan agar tidak meminta ulang */
+  function poiLayer(map, onState) {
+    const P = M.poi || {}, group = L.layerGroup(), seen = new Set();
+    let loaded = null, timer = null, busy = false, on = false;
+    const iconFor = (cat, name) => L.divIcon({ className: '', iconSize: null, iconAnchor: [11, 11], popupAnchor: [0, -10],
+      html: `<span class="poi" style="--c:${cat.col}"><i>${SB.icon(cat.icon, 12)}</i><b>${esc(name)}</b></span>` });
+    const placeIcon = name => L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 8], html: `<span class="poi-place">${esc(name)}</span>` });
+    function add(els) {
+      els.forEach(e => {
+        const id = e.type + e.id, t = e.tags || {}, lat = e.lat != null ? e.lat : e.center && e.center.lat, lng = e.lon != null ? e.lon : e.center && e.center.lon;
+        if (seen.has(id) || lat == null || !t.name) return;
+        seen.add(id);
+        if (t.place) { L.marker([lat, lng], { icon: placeIcon(t.name), interactive: false, keyboard: false }).addTo(group); return; }
+        const cat = POI_CAT.find(c => c.test(t)); if (!cat) return;
+        L.marker([lat, lng], { icon: iconFor(cat, t.name), title: t.name, riseOnHover: true })
+          .bindPopup(`<div class="pp"><span class="pill" style="background:${cat.col}1f;color:${cat.col}">${esc(poiType(t)).toUpperCase()}</span><strong>${esc(t.name)}</strong>`
+            + `${t['addr:street'] ? `<span>${esc(t['addr:street'])}${t['addr:housenumber'] ? ' ' + esc(t['addr:housenumber']) : ''}</span>` : ''}`
+            + `<a href="${gmapsDir(lat, lng)}" target="_blank" rel="noopener">Rute (Google Maps)</a><span class="muted">Data tempat &copy; OpenStreetMap</span></div>`)
+          .addTo(group);
+      });
+    }
+    async function load() {
+      if (!on || !P.url || busy) return;
+      const z = map.getZoom();
+      map.getContainer().classList.toggle('poi-labels', z >= (P.labelZoom || 17));
+      if (z < (P.minZoom || 15)) { map.removeLayer(group); onState && onState('zoom'); return; }
+      group.addTo(map);
+      const view = map.getBounds();
+      if (loaded && loaded.contains(view)) return;
+      const want = view.pad(0.4);
+      busy = true; onState && onState('loading');
+      try {
+        const r = await fetch(P.url, { method: 'POST', body: 'data=' + encodeURIComponent(poiQuery(want)), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        add((await r.json()).elements || []);
+        loaded = loaded ? loaded.extend(want) : want;
+        onState && onState('ok');
+      } catch (e) { onState && onState('error'); }
+      busy = false;
+    }
+    const later = () => { clearTimeout(timer); timer = setTimeout(load, 500); };
+    map.on('moveend', later);
+    return {
+      set(v) { on = v; if (v) load(); else { map.removeLayer(group); map.getContainer().classList.remove('poi-labels'); } },
+      count: () => seen.size
+    };
+  }
   const gmapsUrl = (lat, lng) => `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
   const gmapsDir = (lat, lng) => `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 
@@ -270,12 +350,16 @@
     map.createPane('inarisk').style.zIndex = 350;
     map.createPane('admin').style.zIndex = 360;
     function setBase(k) {
-      if (!BASE[k]) k = 'hybrid';
+      if (!BASE[k]) k = 'jalan';
       if (base) map.removeLayer(base);
-      base = L.layerGroup(BASE[k].layers.map(([u, a]) => L.tileLayer(u, { attribution: a, maxZoom: 19, maxNativeZoom: 18 }))).addTo(map);
+      base = L.layerGroup(BASE[k].layers.map(([u, a, nz]) => L.tileLayer(u, { attribution: a, maxZoom: 19, maxNativeZoom: nz || 18 }))).addTo(map);
       baseKey = k;
     }
     setBase(opts.base || M.basemap);
+
+    /* tempat penting (OpenStreetMap) */
+    const poi = M.poi && M.poi.url ? poiLayer(map, st => opts.onPoi && opts.onPoi(st)) : null;
+    if (poi) poi.set(opts.poi !== false);
 
     /* titik sensor */
     const pinIcon = st => L.divIcon({ className: '', html: `<span class="sb-pin st-${SB.status.cls(st)}"><i></i></span>`, iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -12] });
@@ -376,6 +460,8 @@
       },
       indexLayers: () => IDX.map(l => ({ key: l.key, label: l.label })),
       setAdmin(on) { show.admin = on; toggle(admin, on); },
+      setPoi(on) { if (poi) poi.set(on); },
+      hasPoi: () => !!poi,
       setSensor(on) { if (on) sensor.addTo(map); else map.removeLayer(sensor); },
       setTestMode(on) { testMode = on; el.classList.toggle('picking', on); },
       recenter() { map.setView([M.sensor.lat, M.sensor.lng], M.zoom); },
@@ -385,5 +471,5 @@
     };
   };
 
-  SB.peta = { loadZones, parseKML, classify, zoneAt, distance, fmtDist, inariskAt, adminAt, fmtIdx, gmapsUrl, gmapsDir, BASE, ZLABEL, ZCLS, available: () => !!window.L };
+  SB.peta = { loadZones, parseKML, classify, zoneAt, distance, fmtDist, inariskAt, adminAt, fmtIdx, gmapsUrl, gmapsDir, BASE, ZLABEL, ZCLS, POI_CAT, available: () => !!window.L };
 })();
