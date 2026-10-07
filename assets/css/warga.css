@@ -57,7 +57,7 @@ body.warga.lock .sim-fab { bottom: calc(var(--nav-h) + 24px); }
 .li-v { font-size: 14px; }
 
 /* peta */
-.map-m { min-height: clamp(280px, 48vh, 560px); }
+.map-m { height: clamp(260px, 46vh, 480px); }
 .sheet { border-radius: 22px; gap: 12px; }
 
 
@@ -95,5 +95,5 @@ body.warga.lock .sim-fab { bottom: calc(var(--nav-h) + 24px); }
 }
 /* HP mendatar (tinggi layar kecil) */
 @media (max-height: 480px) and (orientation: landscape) {
-  .map-m { min-height: 240px; }
+  .map-m { height: 240px; }
 }

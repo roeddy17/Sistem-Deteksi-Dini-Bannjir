@@ -76,8 +76,9 @@ body.bpbd.lock .n-side { min-height: 0; overflow-y: auto; overscroll-behavior: c
 .dl { padding: 4px 0; font-size: 13px; }
 
 /* peta */
-.map-cols { align-items: stretch; }
-.map-d { min-height: clamp(320px, 62vh, 640px); }
+.map-cols { align-items: start; }
+/* tinggi peta mengikuti layar (bukan tinggi kolom samping), dan tetap terlihat saat kolom samping digulir */
+.map-d { height: clamp(340px, calc(100vh - 150px), 720px); height: clamp(340px, calc(100dvh - 150px), 720px); position: sticky; top: 20px; }
 .switch-row, .set-row { display: flex; align-items: center; gap: 12px; justify-content: space-between; font-size: 13px; color: var(--tx2); font-weight: 500; }
 .switch-row input, .switch-wrap input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .switch-wrap { position: relative; display: inline-flex; }
@@ -145,6 +146,7 @@ td { padding: 12px 24px; border-top: 1px solid var(--bd); }
 
 /* ---------- layar sedang: kolom samping turun ke bawah ---------- */
 @media (max-width: 1100px) {
+  .map-d { position: relative; top: auto; height: clamp(320px, 55vh, 560px); }
   .stats4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cols { grid-template-columns: minmax(0, 1fr); }
   .col-side { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); align-items: start; }
