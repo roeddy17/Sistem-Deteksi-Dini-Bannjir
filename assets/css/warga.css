@@ -61,6 +61,13 @@ body.warga.lock .sim-fab { bottom: calc(var(--nav-h) + 24px); }
 .sheet { border-radius: 22px; gap: 12px; }
 
 
+/* hasil cek lokasi */
+.loc-res { gap: 12px; }
+.loc-act { display: flex; flex-wrap: wrap; gap: 8px; }
+.loc-act .btn { flex: 1 1 150px; }
+#lr-test[aria-pressed="true"] { border-color: var(--pri); background: var(--pri-s); color: var(--pri); }
+.sheet > .btn { width: 100%; }
+
 /* menu */
 .loc-card { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 20px; color: #fff; background: linear-gradient(90deg, var(--pri), #1D7BD6); }
 .loc-card p { opacity: .8; } .loc-card strong { font-size: 15px; }

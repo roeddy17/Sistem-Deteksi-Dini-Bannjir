@@ -42,5 +42,29 @@ SB.config = {
     { key: 'rendah', label: 'Rendah', range: '0 – 0,3' },
     { key: 'sedang', label: 'Sedang', range: '0,3 – 0,6' },
     { key: 'tinggi', label: 'Tinggi', range: '0,6 – 1' }
-  ]
+  ],
+
+  /*
+   * PETA (Leaflet). Urutan sumber data zona rawan:
+   *   1. arcgisLayerUrl — layer publik BPBD di ArcGIS Online (tersinkron otomatis)
+   *   2. myMapsId       — My Maps publik (dicoba dibaca langsung; bila diblokir browser,
+   *                        otomatis memakai berkas di zonesFile)
+   *   3. zonesFile      — berkas .kml atau .geojson di folder assets/data (KMZ diekstrak dulu menjadi KML)
+   * Selama data BPBD belum ada, zonesFile berisi DATA CONTOH (bukan data BPBD).
+   */
+  map: {
+    sensor: { lat: -2.6025, lng: 140.6690 },   // PERKIRAAN titik sensor di Kali Acai — ganti dengan koordinat asli
+    sensorApprox: true,                        // true = tampilkan keterangan "titik perkiraan"
+    zoom: 15,
+    basemap: 'hybrid',                         // 'hybrid' (satelit + nama tempat), 'satelit', atau 'jalan'
+
+    arcgisLayerUrl: '',                        // contoh: https://services.arcgis.com/xxx/arcgis/rest/services/Bahaya_Banjir/FeatureServer/0
+    myMapsId: '',                              // nilai "mid=" pada tautan My Maps
+    zonesFile: 'assets/data/zona-contoh.kml',
+    zonesSample: true,                         // true = berkas di atas adalah data contoh (diberi label di peta)
+
+    /* Kolom atribut yang berisi kelas zona (teks "Rendah/Sedang/Tinggi") atau indeks 0–1.
+       Kosongkan untuk deteksi otomatis (KELAS, kelas, class, INDEKS, indeks, index, name, ...) */
+    zoneField: ''
+  }
 };

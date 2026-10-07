@@ -152,34 +152,93 @@
   };
 
   /* ================= PETA ================= */
+  const ZDESC = {
+    tinggi: 'Lokasi ini termasuk zona bahaya banjir TINGGI. Saat status Siaga atau Bahaya, segera bersiap dan ikuti arahan petugas.',
+    sedang: 'Lokasi ini termasuk zona bahaya banjir SEDANG. Tetap waspada saat status Siaga atau Bahaya.',
+    rendah: 'Lokasi ini termasuk zona bahaya banjir RENDAH. Tetap pantau informasi dari BPBD.'
+  };
   const peta = {
-    zones: false,
+    zones: true, base: null, lm: null, test: false,
     render() {
-      view.innerHTML = `${subHeader('Peta lokasi sensor', '1 sensor prototipe · Kali Acai')}
+      const P = SB.peta, live = P && P.available();
+      const sim = D.kind === 'simulasi';
+      view.innerHTML = `${subHeader('Peta zona rawan', '1 sensor prototipe · Kali Acai')}
         <div class="map map-m" id="map">
-          <div class="map-svg" id="map-svg"></div>
+          ${live ? '<div class="lmap" id="lmap"></div>' : '<div class="map-svg" id="map-svg"></div>'}
           <button type="button" class="map-chip" id="zone-t" aria-pressed="${this.zones}">${I('layers', 15)}Zona rawan<span class="sw"><i></i></span></button>
-          <p class="map-note">Ilustrasi · rencana titik pemasangan sensor</p>
+          ${live ? `<div class="map-base" role="group" aria-label="Jenis peta">${Object.entries(P.BASE).map(([k, b]) => `<button type="button" data-b="${k}">${b.label}</button>`).join('')}</div>
+          <button type="button" class="map-fab" id="loc-btn" aria-label="Lokasi saya" title="Lokasi saya">${I('locate', 20)}</button>` : ''}
+          <p class="map-note" id="map-note">${live ? 'Memuat data zona…' : 'Ilustrasi · rencana titik pemasangan sensor'}</p>
         </div>
         <div class="legend" id="legend" ${this.zones ? '' : 'hidden'}><span class="muted">Indeks InaRISK:</span>${C.zoneIndex.map(z => `<span class="lg lg-${z.key}">${z.label} ${z.range}</span>`).join('')}</div>
+        ${live ? `<article class="card loc-res" id="loc-res">
+          <div class="row-c"><span class="badge b-pri lg" id="lr-ic">${I('locate', 20)}</span>
+            <div class="grow"><h2 class="h2" id="lr-t">Cek zona di lokasi Anda</h2><p class="sub sm" id="lr-d">Ketuk tombol di bawah untuk melihat apakah lokasi Anda berada di zona rawan banjir.</p></div></div>
+          <div class="loc-act"><button type="button" class="btn btn-pri" id="lr-btn">${I('locate', 16)}Cek lokasi saya</button>
+            ${sim ? `<button type="button" class="btn" id="lr-test" aria-pressed="${this.test}">${I('pin', 16)}Uji: ketuk peta</button>` : ''}</div>
+        </article>` : ''}
         <article class="card sheet">
           <div class="row-c"><span class="badge b-wr lg" id="pm-ic">${I('pin', 20)}</span>
             <div class="grow"><h2 class="h2">${esc(C.sensorName)}</h2><p class="sub sm">${esc(C.locationNote)}</p></div><span id="pm-pill"></span></div>
           <div class="row-sb al-end"><div><p class="big-val" id="pm-val"></p><p class="muted sm" id="pm-upd"></p></div><a class="btn btn-pri" href="#grafik">Lihat grafik</a></div>
+          ${live ? `<a class="btn" href="${SB.peta.gmapsDir(C.map.sensor.lat, C.map.sensor.lng)}" target="_blank" rel="noopener">${I('nav', 16)}Rute ke sensor (Google Maps)</a>` : ''}
         </article>`;
       ui.$('#zone-t').onclick = () => {
         this.zones = !this.zones; ui.$('#zone-t').setAttribute('aria-pressed', String(this.zones));
-        ui.$('#legend').hidden = !this.zones; this.update({ current: D.getCurrent(), status: D.getStatus() });
+        ui.$('#legend').hidden = !this.zones;
+        if (this.lm) this.lm.setZones(this.zones); else this.update({ current: D.getCurrent(), status: D.getStatus() });
       };
+      if (!live) return;
+      const lm = this.lm = SB.liveMap(ui.$('#lmap'), {
+        zones: this.zones, base: this.base,
+        onZones: info => {
+          const n = ui.$('#map-note'); if (!n) return;
+          n.textContent = info.error ? info.error : info.sample ? 'Data zona contoh · bukan data BPBD' : 'Zona rawan: data BPBD';
+          n.classList.toggle('warn', !!(info.error || info.sample));
+        },
+        onLocate: r => this.paintLoc(r)
+      });
+      const paintBase = () => ui.$$('.map-base button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.b === lm.base())));
+      ui.$$('.map-base button').forEach(b => b.onclick = () => { lm.setBase(b.dataset.b); this.base = b.dataset.b; paintBase(); });
+      paintBase();
+      const go = async () => {
+        const btns = [ui.$('#lr-btn'), ui.$('#loc-btn')];
+        btns.forEach(b => b && (b.disabled = true));
+        ui.$('#lr-t').textContent = 'Mencari lokasi Anda…';
+        try { this.paintLoc(await lm.locate()); }
+        catch (e) { this.paintLoc({ error: e.message }); }
+        btns.forEach(b => b && (b.disabled = false));
+      };
+      ui.$('#lr-btn').onclick = go; ui.$('#loc-btn').onclick = go;
+      const tb = ui.$('#lr-test');
+      if (tb) {
+        const setT = on => { this.test = on; tb.setAttribute('aria-pressed', String(on)); lm.setTestMode(on); };
+        tb.onclick = () => setT(!this.test); setT(this.test);
+      }
+    },
+    paintLoc(r) {
+      const ic = ui.$('#lr-ic'), t = ui.$('#lr-t'), d = ui.$('#lr-d'); if (!ic) return;
+      if (r.error) {
+        ic.className = 'badge lg b-wr'; ic.innerHTML = I('alert', 20);
+        t.textContent = 'Lokasi belum dapat ditampilkan'; d.textContent = r.error; return;
+      }
+      const z = r.zone, P = SB.peta;
+      ic.className = 'badge lg b-' + (z ? P.ZCLS[z] : r.zonesReady ? 'ok' : 'mute');
+      ic.innerHTML = I(z && z !== 'rendah' ? 'alert' : 'check', 20);
+      t.textContent = !r.zonesReady ? 'Lokasi ditemukan' : z ? 'Zona bahaya ' + P.ZLABEL[z].toLowerCase() : 'Di luar zona rawan yang dipetakan';
+      d.textContent = (!r.zonesReady ? 'Data zona belum dapat dimuat.' : z ? ZDESC[z] : 'Lokasi ini tidak termasuk zona rawan pada peta BPBD. Tetap pantau informasi dan imbauan.')
+        + ` Jarak ke sensor ${P.fmtDist(r.distance)}.` + (r.test ? ' (Titik uji)' : '') + (r.sample ? ' Catatan: zona masih data contoh.' : '');
     },
     update(snap) {
       const cur = snap.current, st = snap.status;
-      ui.$('#map-svg').innerHTML = SB.mapSVG({ status: st, level: cur.v, zones: this.zones });
+      if (this.lm) this.lm.update(snap);
+      else ui.$('#map-svg').innerHTML = SB.mapSVG({ status: st, level: cur.v, zones: this.zones });
       ui.$('#pm-pill').innerHTML = ui.pill(st);
       ui.$('#pm-ic').className = 'badge lg b-' + S.cls(st);
       ui.$('#pm-val').textContent = F.level(cur.v);
       ui.$('#pm-upd').textContent = 'Diperbarui ' + F.ago(cur.t);
-    }
+    },
+    leave() { if (this.lm) { this.lm.destroy(); this.lm = null; } }
   };
 
   /* ================= RIWAYAT ================= */
@@ -260,6 +319,7 @@
   /* ================= ROUTER ================= */
   const views = { beranda, grafik, peta, riwayat, menu };
   ui.router(Object.keys(views), 'beranda', (name, q) => {
+    if (active && active.leave) active.leave();
     active = views[name];
     document.body.classList.toggle('lock', !!active.lock);
     active.render(q);

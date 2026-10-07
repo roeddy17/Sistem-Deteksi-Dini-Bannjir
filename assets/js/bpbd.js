@@ -155,36 +155,60 @@
   };
 
   /* ================= PETA ================= */
+  const SRC = { arcgis: ['ArcGIS Online BPBD', 'Tersinkron otomatis dengan layer BPBD'], mymaps: ['My Maps BPBD', 'Dibaca langsung dari My Maps'], file: ['Berkas peta di proyek', 'Perbarui berkas bila data BPBD berubah'] };
   const peta = {
-    zones: true, pins: true,
+    zones: true, pins: true, base: null, lm: null,
     render() {
-      main.innerHTML = `${topbar('Peta &amp; zona rawan bencana', 'Ilustrasi rencana lokasi sensor dengan zona rawan dari BPBD')}
+      const P = SB.peta, live = P && P.available(), M = C.map;
+      main.innerHTML = `${topbar('Peta &amp; zona rawan bencana', 'Lokasi sensor dan zona rawan banjir dari data BPBD')}
         <div class="cols map-cols">
-          <div class="map map-d"><div class="map-svg" id="map-svg"></div><p class="map-note">Ilustrasi · rencana titik pemasangan sensor</p></div>
+          <div class="map map-d">${live ? '<div class="lmap" id="lmap"></div>' : '<div class="map-svg" id="map-svg"></div>'}<p class="map-note" id="map-note">${live ? 'Memuat data zona…' : 'Ilustrasi · rencana titik pemasangan sensor'}</p></div>
           <div class="col-side">
             <article class="card"><div class="row-c"><span class="c-pri">${I('layers', 18)}</span><h2 class="h2">Lapisan peta</h2></div>
               <label class="switch-row"><span>Zona rawan bencana</span><input type="checkbox" id="l-zone" ${this.zones ? 'checked' : ''}><span class="switch"></span></label>
-              <label class="switch-row"><span>Lokasi sensor</span><input type="checkbox" id="l-pin" ${this.pins ? 'checked' : ''}><span class="switch"></span></label></article>
+              <label class="switch-row"><span>Lokasi sensor</span><input type="checkbox" id="l-pin" ${this.pins ? 'checked' : ''}><span class="switch"></span></label>
+              ${live ? `<div class="seg" role="group" aria-label="Jenis peta">${Object.entries(P.BASE).map(([k, b]) => `<button type="button" data-b="${k}">${b.label}</button>`).join('')}</div>` : ''}</article>
             <article class="card list pad-y0"><div class="li-h"><h2 class="h2">Klasifikasi zona rawan</h2><p class="muted sm">Indeks InaRISK (BNPB) · skala 0 – 1</p></div>
-              ${C.zoneIndex.map(z => `<div class="li ai-c"><i class="zsw z-${z.key}"></i><div class="grow"><strong class="sm">${z.label}</strong><p class="sub sm">Indeks ${z.range}</p></div></div>`).join('')}</article>
+              ${C.zoneIndex.map(z => `<div class="li ai-c"><i class="zsw z-${z.key}"></i><div class="grow"><strong class="sm">${z.label}</strong><p class="sub sm">Indeks ${z.range}</p></div><span class="muted sm" data-zc="${z.key}"></span></div>`).join('')}</article>
+            ${live ? `<article class="card" id="z-src"><div class="row-c"><span class="c-pri">${I('db', 18)}</span><h2 class="h2">Sumber data zona</h2></div><p class="sub sm" id="z-src-t">Memuat…</p></article>` : ''}
             <article class="card sensor-card">
               <div class="row-c"><span class="badge lg" id="p-ic">${I('pin', 20)}</span><div class="grow"><p class="muted sm">Sensor terpilih</p><h2 class="h2">${esc(C.sensorName)}</h2></div><span id="p-pill"></span></div>
-              <p class="sub sm">${esc(C.locationNote)}</p><p class="big-val" id="p-val"></p><p class="muted sm" id="p-upd"></p>
-              <a class="btn btn-pri" href="#grafik">${I('chart', 16)}Lihat grafik sensor</a></article>
+              <p class="sub sm">${esc(C.locationNote)}${live ? ` · ${M.sensor.lat.toFixed(5)}, ${M.sensor.lng.toFixed(5)}${M.sensorApprox ? ' (perkiraan)' : ''}` : ''}</p><p class="big-val" id="p-val"></p><p class="muted sm" id="p-upd"></p>
+              <a class="btn btn-pri" href="#grafik">${I('chart', 16)}Lihat grafik sensor</a>
+              ${live ? `<a class="btn" href="${P.gmapsUrl(M.sensor.lat, M.sensor.lng)}" target="_blank" rel="noopener">${I('map', 16)}Buka di Google Maps</a>` : ''}</article>
           </div>
         </div>`;
-      ui.$('#l-zone').onchange = e => { this.zones = e.target.checked; this.update(snapNow()); };
-      ui.$('#l-pin').onchange = e => { this.pins = e.target.checked; this.update(snapNow()); };
+      ui.$('#l-zone').onchange = e => { this.zones = e.target.checked; this.lm ? this.lm.setZones(this.zones) : this.update(snapNow()); };
+      ui.$('#l-pin').onchange = e => { this.pins = e.target.checked; this.lm ? this.lm.setSensor(this.pins) : this.update(snapNow()); };
+      if (!live) return;
+      const lm = this.lm = SB.liveMap(ui.$('#lmap'), { zones: this.zones, sensor: this.pins, base: this.base, onZones: info => this.paintSrc(info) });
+      const paintBase = () => ui.$$('[data-b]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.b === lm.base())));
+      ui.$$('[data-b]').forEach(b => b.onclick = () => { lm.setBase(b.dataset.b); this.base = b.dataset.b; paintBase(); });
+      paintBase();
+    },
+    paintSrc(info) {
+      const n = ui.$('#map-note'), t = ui.$('#z-src-t'); if (!t) return;
+      if (info.error) { n.textContent = info.error; n.classList.add('warn'); t.textContent = info.error; return; }
+      const [name, how] = SRC[info.source], c = info.counts;
+      n.textContent = info.sample ? 'Data zona contoh · bukan data BPBD' : 'Zona rawan: ' + name;
+      n.classList.toggle('warn', !!info.sample);
+      ui.$$('[data-zc]').forEach(el => { el.textContent = c[el.dataset.zc] + ' area'; });
+      t.innerHTML = `<strong>${info.sample ? 'Data contoh (bukan data BPBD)' : name}</strong><br>${info.sample ? 'Ganti dengan data dari BPBD di config.js' : how}. ${info.fc.features.length} area dimuat${c.lain ? `, ${c.lain} tanpa kelas yang dikenali` : ''}.`
+        + (info.notes && info.notes.length ? `<br><span class="c-wr">${esc(info.notes.join(' '))}</span>` : '');
     },
     update(snap) {
       const cur = snap.current, st = snap.status;
-      ui.$('#map-svg').innerHTML = SB.mapSVG({ status: st, level: cur.v, zones: this.zones });
-      if (!this.pins) ui.$$('#map-svg svg > circle, #map-svg svg > g:last-child').forEach(n => n.style.display = 'none');
+      if (this.lm) this.lm.update(snap);
+      else {
+        ui.$('#map-svg').innerHTML = SB.mapSVG({ status: st, level: cur.v, zones: this.zones });
+        if (!this.pins) ui.$$('#map-svg svg > circle, #map-svg svg > g:last-child').forEach(n => n.style.display = 'none');
+      }
       ui.$('#p-pill').innerHTML = ui.pill(st);
       ui.$('#p-ic').className = 'badge lg b-' + S.cls(st);
       ui.$('#p-val').textContent = F.level(cur.v);
       ui.$('#p-upd').textContent = 'Diperbarui ' + F.ago(cur.t);
-    }
+    },
+    leave() { if (this.lm) { this.lm.destroy(); this.lm = null; } }
   };
 
   /* ================= LAPORAN HISTORIS ================= */
@@ -372,6 +396,7 @@
   /* ================= ROUTER & DATA ================= */
   const views = { dashboard, grafik, peta, laporan, imbauan, notifikasi };
   ui.router(Object.keys(views), 'dashboard', name => {
+    if (active && active.leave) active.leave();
     active = views[name];
     document.body.classList.toggle('lock', !!active.lock);
     ui.$$('.nav a').forEach(a => a.dataset.r === name ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));

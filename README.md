@@ -46,6 +46,26 @@ Nilai yang dapat berubah setelah validasi dengan BPBD dikumpulkan di satu berkas
 | `sensorName`, `locationLabel` | Sensor Prototipe, Kali Acai | Teks lokasi |
 | `dataSource` | `simulasi` | Ganti ke `firebase` pada tahap integrasi |
 | `zoneIndex` | 0–0,3 / 0,3–0,6 / 0,6–1 | Kelas zona rawan InaRISK (BNPB) |
+| `map.sensor` | -2.6025, 140.6690 | Koordinat titik sensor (**masih perkiraan**) |
+| `map.zonesFile` | `assets/data/zona-contoh.kml` | Data zona rawan (**masih data contoh**) |
+| `map.myMapsId`, `map.arcgisLayerUrl` | kosong | Sumber zona langsung dari My Maps / ArcGIS Online BPBD |
+
+## Peta zona rawan
+
+Halaman Peta (warga dan BPBD) memakai **Leaflet** (library JavaScript peta, disimpan di `assets/vendor/leaflet`) dengan peta dasar gratis tanpa API key: citra satelit Esri dan OpenStreetMap. Fitur:
+
+- zona rawan banjir berwarna hijau/kuning/merah sesuai kelas indeks InaRISK; ketuk area untuk melihat kelasnya;
+- titik sensor dengan warna status live (Aman/Siaga/Bahaya) dan tautan rute di Google Maps;
+- **Cek lokasi saya** (GPS): menampilkan posisi pengguna dan zona tempatnya berada. GPS hanya berjalan di `https://` (misalnya GitHub Pages) atau `localhost`;
+- mode simulasi: tombol **Uji: ketuk peta** untuk mencoba hasil cek zona di titik mana pun tanpa GPS.
+
+**Mengganti data contoh dengan data dari BPBD** (`assets/js/config.js`, bagian `map`):
+
+1. *Layer publik ArcGIS Online* → isi `arcgisLayerUrl` dengan URL layer (`.../FeatureServer/0`). Tersinkron otomatis.
+2. *My Maps* → isi `myMapsId` dengan nilai `mid=` dari tautan My Maps (peta harus dibagikan publik). Jika browser menolak membaca My Maps secara langsung, peta otomatis memakai berkas di `zonesFile`, jadi simpan juga hasil ekspor KML-nya.
+3. *Berkas KML/GeoJSON* → simpan di `assets/data/`, isi `zonesFile` dengan namanya, lalu ubah `zonesSample` menjadi `false`. Berkas KMZ adalah ZIP: ekstrak dulu, ambil `doc.kml` di dalamnya.
+
+Kelas zona dibaca otomatis dari atribut yang berisi kata Rendah/Sedang/Tinggi atau nilai indeks 0–1 (mis. kolom `KELAS` atau `INDEKS`). Jika nama kolomnya lain, isi `zoneField`. Data harus memakai koordinat WGS 84 (latitude/longitude).
 
 Ambang batas mengikuti prototipe Oktavian et al. (2026). Status dihitung dari nilai yang dibulatkan ke 1 cm (resolusi sensor).
 
@@ -60,7 +80,10 @@ assets/
         core.js     logika status, format waktu/angka, ikon, router
         data.js     lapisan data: simulator, statistik, imbauan
         chart.js    grafik SVG (zona, ambang, tooltip, unduh PNG)
-        widgets.js  peta ilustrasi, notifikasi, pemilih hari, panel simulator
+        widgets.js  peta ilustrasi (cadangan), notifikasi, pemilih hari, panel simulator
+        peta.js     peta interaktif: zona rawan (KML/GeoJSON/ArcGIS), sensor, GPS
+  data/ zona-contoh.kml   data zona CONTOH (ganti dengan data BPBD)
+  vendor/leaflet/   library peta Leaflet 1.9.4 (lisensi BSD-2)
         warga.js    layar warga
         bpbd.js     layar BPBD
 ```
@@ -71,14 +94,14 @@ assets/
 |---|---|---|
 | A1 Beranda | `warga.html#beranda` | `warga.js` → `beranda` |
 | A2 Detail Grafik | `warga.html#grafik` | `warga.js` → `grafik` |
-| A3 Peta Sensor | `warga.html#peta` | `warga.js` → `peta` |
+| A3 Peta Sensor | `warga.html#peta` | `warga.js` → `peta`, `peta.js` |
 | A4 Riwayat | `warga.html#riwayat` | `warga.js` → `riwayat` |
 | A5 Menu | `warga.html#menu` | `warga.js` → `menu` |
 | A6 Notifikasi | notifikasi melayang + notifikasi browser | `widgets.js` → `SB.notify` |
 | A7 Mode Offline | banner otomatis saat koneksi putus | `warga.js` → `setOffline` |
 | B1 Dashboard | `bpbd.html#dashboard` | `bpbd.js` → `dashboard` |
 | B2 Grafik Monitoring | `bpbd.html#grafik` | `bpbd.js` → `grafik` |
-| B3 Peta & Zona Rawan | `bpbd.html#peta` | `bpbd.js` → `peta` |
+| B3 Peta & Zona Rawan | `bpbd.html#peta` | `bpbd.js` → `peta`, `peta.js` |
 | B4 Laporan Historis | `bpbd.html#laporan` | `bpbd.js` → `laporan` |
 | B5 Kirim Imbauan | `bpbd.html#imbauan` | `bpbd.js` → `imbauan` |
 | B6 Notifikasi | `bpbd.html#notifikasi` | `bpbd.js` → `notifikasi` |
@@ -101,5 +124,5 @@ Usulan struktur data di Realtime Database (dikirim oleh ESP8266):
 
 - **Notifikasi:** versi ini menampilkan notifikasi di halaman, bunyi (meniru buzzer prototipe: bip berulang untuk Siaga, sirene untuk Bahaya), getar di HP Android, dan notifikasi browser saat tab tidak sedang dilihat. Notifikasi yang tetap muncul ketika browser ditutup memerlukan Firebase Cloud Messaging dan *service worker* (tahap integrasi). Di iPhone, notifikasi web hanya berjalan jika situs dipasang ke Home Screen.
 - **Imbauan** tersimpan di perangkat (localStorage) dan tersinkron antar-tab pada browser yang sama. Pengiriman ke perangkat lain memerlukan Firebase.
-- **Peta** adalah ilustrasi rencana titik pemasangan, karena sensor belum dipasang di lapangan.
+- **Peta**: titik sensor masih perkiraan dan zona rawan masih data contoh sampai data BPBD dimasukkan. Peta dasar memerlukan internet; atribusi Esri dan OpenStreetMap tampil di pojok peta sesuai ketentuan pemakaiannya.
 - **Font Inter** dimuat dari Google Fonts; tanpa internet, browser memakai font sistem.
