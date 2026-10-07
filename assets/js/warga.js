@@ -181,12 +181,14 @@
       const P = SB.peta, live = P && P.available();
       const sim = D.kind === 'simulasi';
       view.innerHTML = `${subHeader('Peta zona rawan', '1 sensor prototipe · Kali Acai')}
+        <div class="map-bar" role="toolbar" aria-label="Pengaturan peta">
+          <button type="button" class="map-chip" id="zone-t" aria-pressed="${this.zones}"><i class="dot-t"></i>Zona rawan</button>
+          ${live ? `<div class="map-base" role="group" aria-label="Jenis peta">${Object.entries(P.BASE).map(([k, b]) => `<button type="button" data-b="${k}">${b.label}</button>`).join('')}</div>` : ''}
+          ${live && C.map.poi && C.map.poi.url ? `<button type="button" class="map-chip poi-t" id="poi-t" aria-pressed="${this.poi}"><i class="dot-t"></i>Tempat</button>` : ''}
+        </div>
         <div class="map map-m" id="map">
           ${live ? '<div class="lmap" id="lmap"></div>' : '<div class="map-svg" id="map-svg"></div>'}
-          <button type="button" class="map-chip" id="zone-t" aria-pressed="${this.zones}">${I('layers', 15)}Zona rawan<span class="sw"><i></i></span></button>
-          ${live && C.map.poi && C.map.poi.url ? `<button type="button" class="map-chip poi-t" id="poi-t" aria-pressed="${this.poi}">${I('pin', 15)}Tempat<span class="sw"><i></i></span></button>` : ''}
-          ${live ? `<div class="map-base" role="group" aria-label="Jenis peta">${Object.entries(P.BASE).map(([k, b]) => `<button type="button" data-b="${k}">${b.label}</button>`).join('')}</div>
-          <button type="button" class="map-fab" id="loc-btn" aria-label="Lokasi saya" title="Lokasi saya">${I('locate', 20)}</button>` : ''}
+          ${live ? `<button type="button" class="map-fab" id="loc-btn" aria-label="Lokasi saya" title="Lokasi saya">${I('locate', 20)}</button>` : ''}
           <p class="map-note" id="map-note">${live ? 'Memuat data zona…' : 'Ilustrasi · rencana titik pemasangan sensor'}</p>
         </div>
         <div class="legend" id="legend" ${this.zones ? '' : 'hidden'}><span class="muted">Indeks InaRISK:</span>${C.zoneIndex.map(z => `<span class="lg lg-${z.key}">${z.label} ${z.range}</span>`).join('')}</div>

@@ -247,13 +247,13 @@
 
   /* ---------- Tempat penting dari OpenStreetMap (Overpass API) ---------- */
   const POI_CAT = [
-    { key: 'kes', label: 'Kesehatan', icon: 'plus', col: '#DC2626', test: t => /^(hospital|clinic|doctors|pharmacy|dentist)$/.test(t.amenity) },
-    { key: 'edu', label: 'Pendidikan', icon: 'book', col: '#2563EB', test: t => /^(school|university|college|kindergarten)$/.test(t.amenity) },
-    { key: 'ibadah', label: 'Tempat ibadah', icon: 'worship', col: '#7C3AED', test: t => t.amenity === 'place_of_worship' },
+    { key: 'kes', label: 'Kesehatan', icon: 'plus', col: '#DB2777', test: t => /^(hospital|clinic|doctors|pharmacy|dentist)$/.test(t.amenity) },
+    { key: 'edu', label: 'Pendidikan', icon: 'book', col: '#0E5AA7', test: t => /^(school|university|college|kindergarten)$/.test(t.amenity) },
+    { key: 'ibadah', label: 'Tempat ibadah', icon: 'worship', col: '#6D28D9', test: t => t.amenity === 'place_of_worship' },
     { key: 'gov', label: 'Pemerintahan & keamanan', icon: 'landmark', col: '#475569', test: t => /^(townhall|police|fire_station|post_office|community_centre)$/.test(t.amenity) || t.office === 'government' },
-    { key: 'makan', label: 'Kafe & restoran', icon: 'cup', col: '#EA580C', test: t => /^(restaurant|cafe|fast_food|food_court)$/.test(t.amenity) },
+    { key: 'makan', label: 'Kafe & restoran', icon: 'cup', col: '#0891B2', test: t => /^(restaurant|cafe|fast_food|food_court)$/.test(t.amenity) },
     { key: 'inap', label: 'Penginapan', icon: 'bed', col: '#0D9488', test: t => /^(hotel|guest_house|motel|hostel)$/.test(t.tourism) },
-    { key: 'belanja', label: 'Belanja & bank', icon: 'cart', col: '#16A34A', test: t => /^(marketplace|bank)$/.test(t.amenity) || /^(supermarket|mall|convenience|department_store)$/.test(t.shop) }
+    { key: 'belanja', label: 'Belanja & bank', icon: 'cart', col: '#4F46E5', test: t => /^(marketplace|bank)$/.test(t.amenity) || /^(supermarket|mall|convenience|department_store)$/.test(t.shop) }
   ];
   const POI_TYPE = { hospital: 'Rumah sakit', clinic: 'Klinik / puskesmas', doctors: 'Praktik dokter', pharmacy: 'Apotek', dentist: 'Dokter gigi',
     school: 'Sekolah', university: 'Universitas', college: 'Perguruan tinggi', kindergarten: 'TK / PAUD', townhall: 'Kantor pemerintahan',
@@ -424,7 +424,7 @@
       const ll = [pos.lat, pos.lng];
       if (!me) {
         me = L.marker(ll, { icon: L.divIcon({ className: '', html: '<span class="sb-me"></span>', iconSize: [20, 20], iconAnchor: [10, 10] }), zIndexOffset: 1000, title: 'Lokasi Anda' }).addTo(map);
-        meAcc = L.circle(ll, { radius: pos.acc || 0, color: '#2563EB', weight: 1, fillOpacity: 0.12, interactive: false }).addTo(map);
+        meAcc = L.circle(ll, { radius: pos.acc || 0, color: '#0E5AA7', weight: 1, fillOpacity: 0.12, interactive: false }).addTo(map);
       } else { me.setLatLng(ll); meAcc.setLatLng(ll).setRadius(pos.acc || 0); }
       map.setView(ll, Math.max(map.getZoom(), 16));
       return result(pos);
