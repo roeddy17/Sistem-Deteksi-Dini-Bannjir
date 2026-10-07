@@ -46,6 +46,8 @@ Nilai yang dapat berubah setelah validasi dengan BPBD dikumpulkan di satu berkas
 | `sensorName`, `locationLabel` | Sensor Prototipe, Kali Acai | Teks lokasi |
 | `dataSource` | `simulasi` | Ganti ke `firebase` pada tahap integrasi |
 | `zoneIndex` | 0–0,3 / 0,3–0,6 / 0,6–1 | Kelas zona rawan InaRISK (BNPB) |
+| `map.inarisk.url` | `gis.bnpb.go.id/.../inarisk/layer_bahaya_banjir/ImageServer` | Indeks bahaya banjir resmi InaRISK (BNPB) |
+| `map.adminUrl` | `gis.bnpb.go.id/.../Basemap/batas_administrasi/MapServer` | Batas administrasi (BNPB) |
 | `map.sensor` | -2.6025, 140.6690 | Koordinat titik sensor (**masih perkiraan**) |
 | `map.zonesFile` | `assets/data/zona-contoh.kml` | Data zona rawan (**masih data contoh**) |
 | `map.myMapsId`, `map.arcgisLayerUrl` | kosong | Sumber zona langsung dari My Maps / ArcGIS Online BPBD |
@@ -54,16 +56,20 @@ Nilai yang dapat berubah setelah validasi dengan BPBD dikumpulkan di satu berkas
 
 Halaman Peta (warga dan BPBD) memakai **Leaflet** (library JavaScript peta, disimpan di `assets/vendor/leaflet`) dengan peta dasar gratis tanpa API key: citra satelit Esri dan OpenStreetMap. Fitur:
 
-- zona rawan banjir berwarna hijau/kuning/merah sesuai kelas indeks InaRISK; ketuk area untuk melihat kelasnya;
+- **indeks bahaya banjir resmi InaRISK (BNPB)**, dibaca langsung dari layanan ArcGIS publik `gis.bnpb.go.id` sehingga selalu sama dengan peta InaRISK; ketuk titik di peta untuk melihat nilai indeksnya;
+- batas administrasi (BNPB);
+- zona rawan banjir (area) dari BPBD bila sudah dimasukkan, berwarna hijau/kuning/merah sesuai kelas indeks; ketuk area untuk melihat kelasnya;
 - titik sensor dengan warna status live (Aman/Siaga/Bahaya) dan tautan rute di Google Maps;
-- **Cek lokasi saya** (GPS): menampilkan posisi pengguna dan zona tempatnya berada. GPS hanya berjalan di `https://` (misalnya GitHub Pages) atau `localhost`;
+- **Cek lokasi saya** (GPS): menampilkan posisi pengguna, zona tempatnya berada (zona BPBD diutamakan, lalu indeks InaRISK), dan nilai indeks InaRISK di titik itu. GPS hanya berjalan di `https://` (misalnya GitHub Pages) atau `localhost`;
 - mode simulasi: tombol **Uji: ketuk peta** untuk mencoba hasil cek zona di titik mana pun tanpa GPS.
 
-**Mengganti data contoh dengan data dari BPBD** (`assets/js/config.js`, bagian `map`):
+Data zona contoh di `assets/data/zona-contoh.kml` hanya dipakai bila layer InaRISK dikosongkan.
+
+**Menambahkan zona rawan (area) dari BPBD** (`assets/js/config.js`, bagian `map`):
 
 1. *Layer publik ArcGIS Online* → isi `arcgisLayerUrl` dengan URL layer (`.../FeatureServer/0`). Tersinkron otomatis.
 2. *My Maps* → isi `myMapsId` dengan nilai `mid=` dari tautan My Maps (peta harus dibagikan publik). Jika browser menolak membaca My Maps secara langsung, peta otomatis memakai berkas di `zonesFile`, jadi simpan juga hasil ekspor KML-nya.
-3. *Berkas KML/GeoJSON* → simpan di `assets/data/`, isi `zonesFile` dengan namanya, lalu ubah `zonesSample` menjadi `false`. Berkas KMZ adalah ZIP: ekstrak dulu, ambil `doc.kml` di dalamnya.
+3. *Berkas KML/GeoJSON* → simpan di `assets/data/`, isi `zonesFile` dengan namanya, lalu ubah `zonesSample` menjadi `false` (wajib, agar berkas ditampilkan bersama layer InaRISK). Berkas KMZ adalah ZIP: ekstrak dulu, ambil `doc.kml` di dalamnya.
 
 Kelas zona dibaca otomatis dari atribut yang berisi kata Rendah/Sedang/Tinggi atau nilai indeks 0–1 (mis. kolom `KELAS` atau `INDEKS`). Jika nama kolomnya lain, isi `zoneField`. Data harus memakai koordinat WGS 84 (latitude/longitude).
 
@@ -81,7 +87,7 @@ assets/
         data.js     lapisan data: simulator, statistik, imbauan
         chart.js    grafik SVG (zona, ambang, tooltip, unduh PNG)
         widgets.js  peta ilustrasi (cadangan), notifikasi, pemilih hari, panel simulator
-        peta.js     peta interaktif: zona rawan (KML/GeoJSON/ArcGIS), sensor, GPS
+        peta.js     peta interaktif: InaRISK, batas wilayah, zona BPBD (KML/GeoJSON/ArcGIS), sensor, GPS
   data/ zona-contoh.kml   data zona CONTOH (ganti dengan data BPBD)
   vendor/leaflet/   library peta Leaflet 1.9.4 (lisensi BSD-2)
         warga.js    layar warga
@@ -124,5 +130,5 @@ Usulan struktur data di Realtime Database (dikirim oleh ESP8266):
 
 - **Notifikasi:** versi ini menampilkan notifikasi di halaman, bunyi (meniru buzzer prototipe: bip berulang untuk Siaga, sirene untuk Bahaya), getar di HP Android, dan notifikasi browser saat tab tidak sedang dilihat. Notifikasi yang tetap muncul ketika browser ditutup memerlukan Firebase Cloud Messaging dan *service worker* (tahap integrasi). Di iPhone, notifikasi web hanya berjalan jika situs dipasang ke Home Screen.
 - **Imbauan** tersimpan di perangkat (localStorage) dan tersinkron antar-tab pada browser yang sama. Pengiriman ke perangkat lain memerlukan Firebase.
-- **Peta**: titik sensor masih perkiraan dan zona rawan masih data contoh sampai data BPBD dimasukkan. Peta dasar memerlukan internet; atribusi Esri dan OpenStreetMap tampil di pojok peta sesuai ketentuan pemakaiannya.
+- **Peta**: titik sensor masih perkiraan. Layer InaRISK dan batas administrasi bergantung pada ketersediaan server BNPB; bila server tidak dapat diakses, peta menampilkan keterangan "gagal dimuat". Pembacaan nilai indeks (ketuk peta / cek lokasi) memerlukan server BNPB mengizinkan permintaan dari situs lain (CORS). Peta dasar memerlukan internet; atribusi Esri dan OpenStreetMap tampil di pojok peta sesuai ketentuan pemakaiannya.
 - **Font Inter** dimuat dari Google Fonts; tanpa internet, browser memakai font sistem.

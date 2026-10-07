@@ -45,14 +45,23 @@ SB.config = {
   ],
 
   /*
-   * PETA (Leaflet). Urutan sumber data zona rawan:
+   * PETA (Leaflet). Zona rawan berbentuk area (poligon) dari BPBD, urutan sumbernya:
    *   1. arcgisLayerUrl — layer publik BPBD di ArcGIS Online (tersinkron otomatis)
    *   2. myMapsId       — My Maps publik (dicoba dibaca langsung; bila diblokir browser,
    *                        otomatis memakai berkas di zonesFile)
    *   3. zonesFile      — berkas .kml atau .geojson di folder assets/data (KMZ diekstrak dulu menjadi KML)
-   * Selama data BPBD belum ada, zonesFile berisi DATA CONTOH (bukan data BPBD).
+   * Selama data BPBD belum ada, zonesFile berisi DATA CONTOH (bukan data BPBD); data contoh
+   * tidak ditampilkan bila layer InaRISK di bawah aktif.
    */
   map: {
+    /* Indeks bahaya banjir resmi InaRISK (BNPB), layanan ArcGIS ImageServer publik.
+       Ditampilkan sebagai lapisan warna; nilai indeks di titik GPS dibaca lewat "identify". */
+    inarisk: {
+      url: 'https://gis.bnpb.go.id/server/rest/services/inarisk/layer_bahaya_banjir/ImageServer',
+      opacity: 0.6
+    },
+    /* Batas administrasi (BNPB), layanan ArcGIS MapServer publik */
+    adminUrl: 'https://gis.bnpb.go.id/server/rest/services/Basemap/batas_administrasi/MapServer',
     sensor: { lat: -2.6025, lng: 140.6690 },   // PERKIRAAN titik sensor di Kali Acai — ganti dengan koordinat asli
     sensorApprox: true,                        // true = tampilkan keterangan "titik perkiraan"
     zoom: 15,

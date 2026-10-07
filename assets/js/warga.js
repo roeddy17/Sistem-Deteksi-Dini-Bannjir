@@ -186,16 +186,13 @@
       ui.$('#zone-t').onclick = () => {
         this.zones = !this.zones; ui.$('#zone-t').setAttribute('aria-pressed', String(this.zones));
         ui.$('#legend').hidden = !this.zones;
-        if (this.lm) this.lm.setZones(this.zones); else this.update({ current: D.getCurrent(), status: D.getStatus() });
+        if (this.lm) { this.lm.setZones(this.zones); this.lm.setInarisk(this.zones); } else this.update({ current: D.getCurrent(), status: D.getStatus() });
       };
       if (!live) return;
       const lm = this.lm = SB.liveMap(ui.$('#lmap'), {
-        zones: this.zones, base: this.base,
-        onZones: info => {
-          const n = ui.$('#map-note'); if (!n) return;
-          n.textContent = info.error ? info.error : info.sample ? 'Data zona contoh · bukan data BPBD' : 'Zona rawan: data BPBD';
-          n.classList.toggle('warn', !!(info.error || info.sample));
-        },
+        zones: this.zones, inarisk: this.zones, base: this.base,
+        onZones: info => { this.zinfo = info; this.paintNote(); },
+        onLayers: st => { this.lst = st; this.paintNote(); },
         onLocate: r => this.paintLoc(r)
       });
       const paintBase = () => ui.$$('.map-base button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.b === lm.base())));
@@ -216,6 +213,14 @@
         tb.onclick = () => setT(!this.test); setT(this.test);
       }
     },
+    paintNote() {
+      const n = ui.$('#map-note'), info = this.zinfo || {}, st = this.lst || {}; if (!n) return;
+      const parts = [];
+      if (info.fc) parts.push(info.sample ? 'Zona contoh (bukan data BPBD)' : 'Zona rawan BPBD');
+      if (info.inarisk) parts.push(st.inarisk === false ? 'Layer InaRISK gagal dimuat' : 'Indeks bahaya: InaRISK BNPB');
+      n.textContent = info.error || parts.join(' · ') || 'Memuat data zona…';
+      n.classList.toggle('warn', !!(info.error || info.sample || st.inarisk === false));
+    },
     paintLoc(r) {
       const ic = ui.$('#lr-ic'), t = ui.$('#lr-t'), d = ui.$('#lr-d'); if (!ic) return;
       if (r.error) {
@@ -225,9 +230,11 @@
       const z = r.zone, P = SB.peta;
       ic.className = 'badge lg b-' + (z ? P.ZCLS[z] : r.zonesReady ? 'ok' : 'mute');
       ic.innerHTML = I(z && z !== 'rendah' ? 'alert' : 'check', 20);
+      const ir = r.inarisk;
       t.textContent = !r.zonesReady ? 'Lokasi ditemukan' : z ? 'Zona bahaya ' + P.ZLABEL[z].toLowerCase() : 'Di luar zona rawan yang dipetakan';
-      d.textContent = (!r.zonesReady ? 'Data zona belum dapat dimuat.' : z ? ZDESC[z] : 'Lokasi ini tidak termasuk zona rawan pada peta BPBD. Tetap pantau informasi dan imbauan.')
-        + ` Jarak ke sensor ${P.fmtDist(r.distance)}.` + (r.test ? ' (Titik uji)' : '') + (r.sample ? ' Catatan: zona masih data contoh.' : '');
+      d.textContent = (!r.zonesReady ? 'Data zona belum dapat dimuat.' : z ? ZDESC[z] : 'Lokasi ini tidak termasuk area bahaya banjir pada peta. Tetap pantau informasi dan imbauan.')
+        + (ir ? ir.error ? ` Indeks InaRISK: ${ir.error}.` : ir.value != null ? ` Indeks bahaya InaRISK di titik ini ${P.fmtIdx(ir.value)}.` : '' : '')
+        + ` Jarak ke sensor ${P.fmtDist(r.distance)}.` + (r.test ? ' (Titik uji)' : '') + (r.sample && r.zoneSrc === 'bpbd' ? ' Catatan: zona masih data contoh.' : '');
     },
     update(snap) {
       const cur = snap.current, st = snap.status;
