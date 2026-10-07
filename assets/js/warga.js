@@ -232,7 +232,7 @@
       ic.innerHTML = I(z && z !== 'rendah' ? 'alert' : 'check', 20);
       const ir = r.inarisk;
       t.textContent = !r.zonesReady ? 'Lokasi ditemukan' : z ? 'Zona bahaya ' + P.ZLABEL[z].toLowerCase() : 'Di luar zona rawan yang dipetakan';
-      d.textContent = (!r.zonesReady ? 'Data zona belum dapat dimuat.' : z ? ZDESC[z] : 'Lokasi ini tidak termasuk area bahaya banjir pada peta. Tetap pantau informasi dan imbauan.')
+      d.textContent = (r.wilayah ? `Wilayah: ${r.wilayah.text}. ` : '') + (!r.zonesReady ? 'Data zona belum dapat dimuat.' : z ? ZDESC[z] : 'Lokasi ini tidak termasuk area bahaya banjir pada peta. Tetap pantau informasi dan imbauan.')
         + (ir ? ir.error ? ` Indeks InaRISK: ${ir.error}.` : ir.value != null ? ` Indeks bahaya InaRISK di titik ini ${P.fmtIdx(ir.value)}.` : '' : '')
         + ` Jarak ke sensor ${P.fmtDist(r.distance)}.` + (r.test ? ' (Titik uji)' : '') + (r.sample && r.zoneSrc === 'bpbd' ? ' Catatan: zona masih data contoh.' : '');
     },

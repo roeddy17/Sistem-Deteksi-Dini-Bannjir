@@ -186,6 +186,8 @@ button { cursor: pointer; }
 .pp { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--tx2); min-width: 160px; }
 .pp strong { color: var(--tx); font-size: 13px; }
 .pp a { color: var(--pri); font-weight: 600; margin-top: 2px; }
+.pp-w { display: flex; gap: 4px; align-items: flex-start; color: var(--tx); font-weight: 500; }
+.pp-w .ic { margin-top: 2px; color: var(--pri); }
 .map-chip { position: absolute; left: 12px; top: 12px; display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 0; border-radius: 18px; padding: 7px 10px 7px 12px; font-weight: 600; font-size: 12px; box-shadow: var(--sh); }
 .sw { width: 32px; height: 18px; border-radius: 9px; background: #CBD5E1; padding: 2px; display: inline-flex; transition: background .2s; }
 .sw i { width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .2s; }

@@ -70,7 +70,8 @@ Pada dialog cetak pilih **Simpan sebagai PDF**, kertas **A4**, margin **Default*
 Halaman Peta (warga dan BPBD) memakai **Leaflet** (library JavaScript peta, disimpan di `assets/vendor/leaflet`) dengan peta dasar gratis tanpa API key: citra satelit Esri dan OpenStreetMap. Fitur:
 
 - **indeks bahaya banjir resmi InaRISK (BNPB)**, dibaca langsung dari layanan ArcGIS publik `gis.bnpb.go.id` sehingga selalu sama dengan peta InaRISK; ketuk titik di peta untuk melihat nilai indeksnya;
-- batas administrasi (BNPB);
+- batas administrasi (BNPB); ketuk peta atau cek lokasi juga menampilkan **nama wilayah** (kelurahan/kampung, distrik, kota/kabupaten, provinsi) dari layanan yang sama;
+- panel BPBD dapat mengganti jenis indeks InaRISK: **bahaya banjir** (bawaan), **risiko banjir**, **kerentanan banjir**, atau **bahaya banjir bandang** (`map.inarisk.others`);
 - zona rawan banjir (area) dari BPBD bila sudah dimasukkan, berwarna hijau/kuning/merah sesuai kelas indeks; ketuk area untuk melihat kelasnya;
 - titik sensor dengan warna status live (Aman/Siaga/Bahaya) dan tautan rute di Google Maps;
 - **Cek lokasi saya** (GPS): menampilkan posisi pengguna, zona tempatnya berada (zona BPBD diutamakan, lalu indeks InaRISK), dan nilai indeks InaRISK di titik itu. GPS hanya berjalan di `https://` (misalnya GitHub Pages) atau `localhost`;

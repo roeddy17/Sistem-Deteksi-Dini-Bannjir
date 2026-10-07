@@ -157,7 +157,7 @@
   /* ================= PETA ================= */
   const SRC = { inarisk: ['InaRISK BNPB', 'Indeks bahaya banjir resmi, dibaca langsung dari server BNPB'], arcgis: ['ArcGIS Online BPBD', 'Tersinkron otomatis dengan layer BPBD'], mymaps: ['My Maps BPBD', 'Dibaca langsung dari My Maps'], file: ['Berkas peta di proyek', 'Perbarui berkas bila data BPBD berubah'] };
   const peta = {
-    zones: true, pins: true, ir: true, adm: true, base: null, lm: null,
+    zones: true, pins: true, ir: true, adm: true, idx: 'bahaya', base: null, lm: null,
     render() {
       const P = SB.peta, live = P && P.available(), M = C.map;
       main.innerHTML = `${topbar('Peta &amp; zona rawan bencana', 'Lokasi sensor dan zona rawan banjir dari data BPBD')}
@@ -165,12 +165,13 @@
           <div class="map map-d">${live ? '<div class="lmap" id="lmap"></div>' : '<div class="map-svg" id="map-svg"></div>'}<p class="map-note" id="map-note">${live ? 'Memuat data zona…' : 'Ilustrasi · rencana titik pemasangan sensor'}</p></div>
           <div class="col-side">
             <article class="card"><div class="row-c"><span class="c-pri">${I('layers', 18)}</span><h2 class="h2">Lapisan peta</h2></div>
-              ${live && M.inarisk && M.inarisk.url ? `<label class="switch-row"><span>Indeks bahaya InaRISK</span><input type="checkbox" id="l-ir" ${this.ir ? 'checked' : ''}><span class="switch"></span></label>` : ''}
+              ${live && M.inarisk && M.inarisk.url ? `<label class="switch-row"><span>Indeks InaRISK</span><input type="checkbox" id="l-ir" ${this.ir ? 'checked' : ''}><span class="switch"></span></label>
+              <label class="field idx-sel">${I('layers', 16)}<select id="l-idx" aria-label="Jenis indeks InaRISK">${[{ key: 'bahaya', label: 'Indeks bahaya banjir' }].concat(M.inarisk.others || []).map(l => `<option value="${l.key}" ${l.key === this.idx ? 'selected' : ''}>${l.label}</option>`).join('')}</select></label>` : ''}
               <label class="switch-row" id="l-zone-row"><span>Zona rawan ${live ? 'BPBD' : 'bencana'}</span><input type="checkbox" id="l-zone" ${this.zones ? 'checked' : ''}><span class="switch"></span></label>
               ${live && M.adminUrl ? `<label class="switch-row"><span>Batas administrasi</span><input type="checkbox" id="l-adm" ${this.adm ? 'checked' : ''}><span class="switch"></span></label>` : ''}
               <label class="switch-row"><span>Lokasi sensor</span><input type="checkbox" id="l-pin" ${this.pins ? 'checked' : ''}><span class="switch"></span></label>
               ${live ? `<div class="seg" role="group" aria-label="Jenis peta">${Object.entries(P.BASE).map(([k, b]) => `<button type="button" data-b="${k}">${b.label}</button>`).join('')}</div>` : ''}</article>
-            <article class="card list pad-y0"><div class="li-h"><h2 class="h2">Klasifikasi indeks bahaya</h2><p class="muted sm">Indeks InaRISK (BNPB) · skala 0 – 1 · ketuk peta untuk melihat nilainya</p></div>
+            <article class="card list pad-y0"><div class="li-h"><h2 class="h2">Klasifikasi indeks InaRISK</h2><p class="muted sm">Indeks InaRISK (BNPB) · skala 0 – 1 · ketuk peta untuk melihat nilainya</p></div>
               ${C.zoneIndex.map(z => `<div class="li ai-c"><i class="zsw z-${z.key}"></i><div class="grow"><strong class="sm">${z.label}</strong><p class="sub sm">Indeks ${z.range}</p></div><span class="muted sm" data-zc="${z.key}"></span></div>`).join('')}</article>
             ${live ? `<article class="card" id="z-src"><div class="row-c"><span class="c-pri">${I('db', 18)}</span><h2 class="h2">Sumber data zona</h2></div><p class="sub sm" id="z-src-t">Memuat…</p></article>` : ''}
             <article class="card sensor-card">
@@ -186,6 +187,7 @@
       const lm = this.lm = SB.liveMap(ui.$('#lmap'), { zones: this.zones, sensor: this.pins, inarisk: this.ir, admin: this.adm, base: this.base,
         onZones: info => { this.zinfo = info; this.paintSrc(); }, onLayers: st => { this.lst = st; this.paintSrc(); } });
       if (ui.$('#l-ir')) ui.$('#l-ir').onchange = e => { this.ir = e.target.checked; lm.setInarisk(this.ir); };
+      if (ui.$('#l-idx')) { lm.setIndex(this.idx); ui.$('#l-idx').onchange = e => { this.idx = e.target.value; lm.setIndex(this.idx); this.paintSrc(); }; }
       if (ui.$('#l-adm')) ui.$('#l-adm').onchange = e => { this.adm = e.target.checked; lm.setAdmin(this.adm); };
       const paintBase = () => ui.$$('[data-b]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.b === lm.base())));
       ui.$$('[data-b]').forEach(b => b.onclick = () => { lm.setBase(b.dataset.b); this.base = b.dataset.b; paintBase(); });
@@ -195,7 +197,8 @@
       const n = ui.$('#map-note'), t = ui.$('#z-src-t'), info = this.zinfo, st = this.lst || {}; if (!t || !info) return;
       if (info.error) { n.textContent = info.error; n.classList.add('warn'); t.textContent = info.error; return; }
       const lines = [], notes = [];
-      if (info.inarisk) lines.push(`<strong>${SRC.inarisk[0]}</strong> · ${st.inarisk === false ? '<span class="c-wr">layer gagal dimuat dari server BNPB</span>' : SRC.inarisk[1]}.`);
+      const idxLabel = ((C.map.inarisk.others || []).find(l => l.key === this.idx) || { label: 'Indeks bahaya banjir' }).label;
+      if (info.inarisk) lines.push(`<strong>${SRC.inarisk[0]}</strong> · ${idxLabel.toLowerCase()} · ${st.inarisk === false ? '<span class="c-wr">layer gagal dimuat dari server BNPB</span>' : 'dibaca langsung dari server BNPB'}.`);
       if (info.fc) {
         const [name, how] = SRC[info.source], c = info.counts;
         lines.push(`<strong>${info.sample ? 'Zona contoh (bukan data BPBD)' : 'Zona BPBD: ' + name}</strong> · ${info.sample ? 'ganti dengan data BPBD di config.js' : how}. ${info.fc.features.length} area${c.lain ? `, ${c.lain} tanpa kelas yang dikenali` : ''}.`);
@@ -206,7 +209,7 @@
       }
       if (info.notes && info.notes.length) notes.push(esc(info.notes.join(' ')));
       t.innerHTML = lines.join('<br>') + (notes.length ? `<br><span class="c-wr">${notes.join(' ')}</span>` : '');
-      n.textContent = [info.fc ? (info.sample ? 'Zona contoh' : 'Zona BPBD') : '', info.inarisk ? (st.inarisk === false ? 'Layer InaRISK gagal dimuat' : 'Indeks bahaya: InaRISK BNPB') : ''].filter(Boolean).join(' · ');
+      n.textContent = [info.fc ? (info.sample ? 'Zona contoh' : 'Zona BPBD') : '', info.inarisk ? (st.inarisk === false ? 'Layer InaRISK gagal dimuat' : idxLabel + ': InaRISK BNPB') : ''].filter(Boolean).join(' · ');
       n.classList.toggle('warn', !!(info.sample || st.inarisk === false));
     },
     update(snap) {

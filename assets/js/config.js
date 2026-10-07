@@ -58,9 +58,16 @@ SB.config = {
        Ditampilkan sebagai lapisan warna; nilai indeks di titik GPS dibaca lewat "identify". */
     inarisk: {
       url: 'https://gis.bnpb.go.id/server/rest/services/inarisk/layer_bahaya_banjir/ImageServer',
-      opacity: 0.6
+      opacity: 0.6,
+      /* Pilihan indeks lain di panel BPBD (layanan publik yang sama, folder inarisk) */
+      others: [
+        { key: 'risiko', label: 'Indeks risiko banjir', url: 'https://gis.bnpb.go.id/server/rest/services/inarisk/layer_risiko_banjir/ImageServer' },
+        { key: 'kerentanan', label: 'Indeks kerentanan banjir', url: 'https://gis.bnpb.go.id/server/rest/services/inarisk/layer_kerentanan_banjir/ImageServer' },
+        { key: 'bandang', label: 'Indeks bahaya banjir bandang', url: 'https://gis.bnpb.go.id/server/rest/services/inarisk/layer_bahaya_banjir_bandang/ImageServer' }
+      ]
     },
-    /* Batas administrasi (BNPB), layanan ArcGIS MapServer publik */
+    /* Batas administrasi (BNPB), layanan ArcGIS MapServer publik. Lapisan 1–4: provinsi, kabupaten/kota,
+       kecamatan/distrik, desa/kelurahan; kolom NAMA_PROP, NAMA_KAB, NAMA_KEC, NAMA_KEL */
     adminUrl: 'https://gis.bnpb.go.id/server/rest/services/Basemap/batas_administrasi/MapServer',
     sensor: { lat: -2.6025, lng: 140.6690 },   // PERKIRAAN titik sensor di Kali Acai — ganti dengan koordinat asli
     sensorApprox: true,                        // true = tampilkan keterangan "titik perkiraan"

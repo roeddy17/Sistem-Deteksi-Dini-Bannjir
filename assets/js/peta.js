@@ -197,8 +197,8 @@
     }
   });
   /* Nilai indeks InaRISK di satu titik (ImageServer identify). Hasil: { value, zone } atau value null (di luar area bahaya) */
-  async function inariskAt(lat, lng) {
-    const u = M.inarisk && M.inarisk.url; if (!u) return null;
+  async function inariskAt(lat, lng, url) {
+    const u = url || (M.inarisk && M.inarisk.url); if (!u) return null;
     const geom = encodeURIComponent(JSON.stringify({ x: lng, y: lat, spatialReference: { wkid: 4326 } }));
     const ctl = 'AbortController' in window ? new AbortController() : null;
     const tm = ctl && setTimeout(() => ctl.abort(), 10000);
@@ -215,6 +215,23 @@
     } catch (e) {
       return { error: e.name === 'AbortError' ? 'server InaRISK tidak merespons' : 'nilai tidak dapat dibaca dari server InaRISK' };
     } finally { if (tm) clearTimeout(tm); }
+  }
+  /* Nama wilayah di satu titik (MapServer identify batas administrasi) */
+  const title = s => String(s || '').toLowerCase().replace(/(^|[\s(/-])\S/g, c => c.toUpperCase());
+  async function adminAt(lat, lng) {
+    if (!M.adminUrl) return null;
+    const d = 0.01, q = `geometry=${lng},${lat}&geometryType=esriGeometryPoint&sr=4326&layers=all:1,2,3,4&tolerance=1`
+      + `&mapExtent=${lng - d},${lat - d},${lng + d},${lat + d}&imageDisplay=400,400,96&returnGeometry=false&f=json`;
+    try {
+      const j = await (await fetch(`${M.adminUrl.replace(/\/+$/, '')}/identify?${q}`)).json();
+      const res = (j.results || []).slice().sort((a, b) => b.layerId - a.layerId);   // tingkat terendah (desa) dulu
+      const a = res.length ? res[0].attributes : null; if (!a) return null;
+      const w = { kel: a.NAMA_KEL, kec: a.NAMA_KEC, kab: a.NAMA_KAB, prop: a.NAMA_PROP };
+      Object.keys(w).forEach(k => { w[k] = w[k] && !/^null$/i.test(w[k]) ? title(w[k]) : ''; });
+      /* di Papua, kecamatan disebut distrik */
+      w.text = [w.kel, w.kec && 'Distrik ' + w.kec, w.kab, w.prop].filter(Boolean).join(', ');
+      return w.text ? w : null;
+    } catch (e) { return null; }
   }
   const fmtIdx = v => (Math.round(v * 100) / 100).toString().replace('.', ',');
 
@@ -277,23 +294,28 @@
     /* indeks bahaya InaRISK dan batas administrasi */
     const status = { inarisk: null, admin: null };
     const tell = () => opts.onLayers && opts.onLayers(Object.assign({}, status));
-    const inarisk = M.inarisk && M.inarisk.url ? new ArcExport(M.inarisk.url, { image: true, pane: 'inarisk', opacity: M.inarisk.opacity || 0.6,
-      attribution: 'Indeks bahaya banjir &copy; <a href="https://inarisk.bnpb.go.id" target="_blank" rel="noopener">InaRISK BNPB</a>',
+    const IDX = M.inarisk && M.inarisk.url ? [{ key: 'bahaya', label: 'Indeks bahaya banjir', url: M.inarisk.url }].concat(M.inarisk.others || []) : [];
+    let idx = IDX[0] || null;
+    const inarisk = idx ? new ArcExport(idx.url, { image: true, pane: 'inarisk', opacity: M.inarisk.opacity || 0.6,
+      attribution: 'Indeks &copy; <a href="https://inarisk.bnpb.go.id" target="_blank" rel="noopener">InaRISK BNPB</a>',
       onStatus: ok => { if (status.inarisk !== ok) { status.inarisk = ok; tell(); } } }) : null;
     const admin = M.adminUrl ? new ArcExport(M.adminUrl, { pane: 'admin', opacity: 0.9, attribution: 'Batas wilayah &copy; BNPB',
       onStatus: ok => { if (status.admin !== ok) { status.admin = ok; tell(); } } }) : null;
     const toggle = (layer, on) => { if (!layer) return; if (on) layer.addTo(map); else map.removeLayer(layer); };
     toggle(inarisk, show.inarisk); toggle(admin, show.admin);
 
-    /* Ketuk peta: tampilkan nilai indeks InaRISK di titik itu (data resmi BNPB) */
+    /* Ketuk peta: nilai indeks InaRISK dan nama wilayah di titik itu (data resmi BNPB) */
     map.on('click', async e => {
-      if (testMode || !inarisk || !show.inarisk) return;
-      const pop = L.popup().setLatLng(e.latlng).setContent('<div class="pp"><span class="muted">Membaca indeks InaRISK…</span></div>').openOn(map);
-      const r = await inariskAt(e.latlng.lat, e.latlng.lng);
+      if (testMode || (!(inarisk && show.inarisk) && !M.adminUrl)) return;
+      const cur = inarisk && show.inarisk ? idx : null;
+      const pop = L.popup().setLatLng(e.latlng).setContent('<div class="pp"><span class="muted">Membaca data InaRISK…</span></div>').openOn(map);
+      const [r, w] = await Promise.all([cur ? inariskAt(e.latlng.lat, e.latlng.lng, cur.url) : null, adminAt(e.latlng.lat, e.latlng.lng)]);
       if (!map.hasLayer(pop)) return;
-      pop.setContent(r.error ? `<div class="pp"><strong>Indeks bahaya InaRISK</strong><span>Maaf, ${r.error}.</span></div>`
-        : `<div class="pp"><span class="pill pill-${r.zone ? ZCLS[r.zone] : 'mute'}">${r.zone ? 'BAHAYA ' + ZLABEL[r.zone].toUpperCase() : 'DI LUAR AREA BAHAYA'}</span>
-          <strong>Indeks bahaya banjir</strong><span>${r.value == null ? 'Tidak ada nilai bahaya di titik ini' : 'Nilai indeks ' + fmtIdx(r.value)}</span><span class="muted">Sumber: InaRISK BNPB</span></div>`);
+      const word = cur && cur.key === 'bahaya' || cur && cur.key === 'bandang' ? 'BAHAYA' : cur && cur.key === 'risiko' ? 'RISIKO' : cur && cur.key === 'kerentanan' ? 'KERENTANAN' : 'KELAS';
+      const idxHtml = !cur ? '' : r.error ? `<strong>${cur.label}</strong><span>Maaf, ${r.error}.</span>`
+        : `<span class="pill pill-${r.zone ? ZCLS[r.zone] : 'mute'}">${r.zone ? word + ' ' + ZLABEL[r.zone].toUpperCase() : 'TIDAK ADA NILAI'}</span>
+          <strong>${cur.label}</strong><span>${r.value == null ? 'Tidak ada nilai indeks di titik ini' : 'Nilai indeks ' + fmtIdx(r.value)}</span>`;
+      pop.setContent(`<div class="pp">${idxHtml}${w ? `<span class="pp-w">${SB.icon('pin', 12)}${esc(w.text)}</span>` : ''}<span class="muted">Sumber: InaRISK BNPB</span></div>`);
     });
 
     /* zona rawan (poligon BPBD) */
@@ -324,12 +346,12 @@
       return result(pos);
     }
     async function result(pos) {
-      const [info, ir] = await Promise.all([zoneInfo ? Promise.resolve(zoneInfo) : loadZones().catch(() => null), inariskAt(pos.lat, pos.lng)]);
+      const [info, ir, wilayah] = await Promise.all([zoneInfo ? Promise.resolve(zoneInfo) : loadZones().catch(() => null), inariskAt(pos.lat, pos.lng), adminAt(pos.lat, pos.lng)]);
       const f = info ? zoneAt(info.fc, pos.lat, pos.lng) : null;
       const irOk = ir && !ir.error;
       /* zona BPBD (bila ada) diutamakan, lalu indeks InaRISK */
       const zone = f ? f.zone : irOk ? ir.zone : null;
-      return { pos, zone, zoneSrc: f ? 'bpbd' : irOk && ir.zone ? 'inarisk' : null, feature: f, inarisk: ir,
+      return { pos, zone, zoneSrc: f ? 'bpbd' : irOk && ir.zone ? 'inarisk' : null, feature: f, inarisk: ir, wilayah,
         sample: !!(info && info.sample), zonesReady: !!info || !!irOk, distance: distance(pos, M.sensor) };
     }
     async function locateMe() {
@@ -347,6 +369,12 @@
     return {
       map, update, setZones, setBase, locate: locateMe,
       setInarisk(on) { show.inarisk = on; toggle(inarisk, on); },
+      /* ganti jenis indeks InaRISK yang ditampilkan (bahaya / risiko / kerentanan / bandang) */
+      setIndex(key) {
+        const n = IDX.find(l => l.key === key); if (!n || !inarisk) return;
+        idx = n; inarisk.url = n.url.replace(/\/+$/, ''); inarisk.refresh();
+      },
+      indexLayers: () => IDX.map(l => ({ key: l.key, label: l.label })),
       setAdmin(on) { show.admin = on; toggle(admin, on); },
       setSensor(on) { if (on) sensor.addTo(map); else map.removeLayer(sensor); },
       setTestMode(on) { testMode = on; el.classList.toggle('picking', on); },
@@ -357,5 +385,5 @@
     };
   };
 
-  SB.peta = { loadZones, parseKML, classify, zoneAt, distance, fmtDist, inariskAt, fmtIdx, gmapsUrl, gmapsDir, BASE, ZLABEL, ZCLS, available: () => !!window.L };
+  SB.peta = { loadZones, parseKML, classify, zoneAt, distance, fmtDist, inariskAt, adminAt, fmtIdx, gmapsUrl, gmapsDir, BASE, ZLABEL, ZCLS, available: () => !!window.L };
 })();
