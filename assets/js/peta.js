@@ -209,8 +209,8 @@
       const raw = j.value == null ? '' : String(j.value).trim();
       const v = parseFloat(raw.split(/[\s,]+/)[0]);
       if (!raw || /nodata/i.test(raw) || !isFinite(v)) return { value: null, zone: null };
-      /* indeks 0–1 (kelas InaRISK); bila layanan memberi kode kelas 2/3, dipetakan ke Sedang/Tinggi */
-      const zone = v >= 0 && v <= 1 ? fromIndex(v) : v === 2 ? 'sedang' : v === 3 ? 'tinggi' : null;
+      /* layanan mengembalikan nilai indeks 0–1 sebagai teks, mis. "0.833333" */
+      const zone = v >= 0 && v <= 1 ? fromIndex(v) : null;
       return { value: v, zone };
     } catch (e) {
       return { error: e.name === 'AbortError' ? 'server InaRISK tidak merespons' : 'nilai tidak dapat dibaca dari server InaRISK' };
