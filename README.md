@@ -52,6 +52,19 @@ Nilai yang dapat berubah setelah validasi dengan BPBD dikumpulkan di satu berkas
 | `map.zonesFile` | `assets/data/zona-contoh.kml` | Data zona rawan (**masih data contoh**) |
 | `map.myMapsId`, `map.arcgisLayerUrl` | kosong | Sumber zona langsung dari My Maps / ArcGIS Online BPBD |
 
+## Laporan PDF (A4)
+
+Tombol **Unduh PDF** di halaman Laporan BPBD menyusun dokumen laporan khusus cetak (bukan cetakan tampilan layar), ukuran **A4** dengan margin atas 20 mm, kanan 20 mm, bawah 22 mm, kiri 25 mm:
+
+1. kop, judul, dan identitas laporan (lokasi, periode, sumber data, ambang batas, tanggal cetak); catatan khusus bila data berasal dari mode simulasi;
+2. ringkasan statistik dan sebaran waktu menurut status;
+3. grafik ketinggian air periode laporan;
+4. tabel kejadian perubahan status;
+5. tabel data rinci lengkap (seluruh baris periode, judul kolom diulang tiap halaman);
+6. keterangan status dan blok pengesahan petugas.
+
+Pada dialog cetak pilih **Simpan sebagai PDF**, kertas **A4**, margin **Default**, matikan **Header dan footer** bawaan browser, dan aktifkan **Grafik latar belakang** agar warna tabel tercetak. Nomor halaman ("Halaman X dari Y") dicetak oleh Chrome/Edge versi terbaru; Firefox belum mendukung kotak margin halaman sehingga nomor halaman tidak muncul. Kode: `assets/js/laporan-cetak.js`, `assets/css/cetak.css`.
+
 ## Peta zona rawan
 
 Halaman Peta (warga dan BPBD) memakai **Leaflet** (library JavaScript peta, disimpan di `assets/vendor/leaflet`) dengan peta dasar gratis tanpa API key: citra satelit Esri dan OpenStreetMap. Fitur:
@@ -81,12 +94,14 @@ Ambang batas mengikuti prototipe Oktavian et al. (2026). Status dihitung dari ni
 assets/
   css/  base.css    token & komponen bersama (Design System)
         warga.css   tata letak web warga (HP → tablet)
-        bpbd.css    tata letak panel BPBD desktop/tablet/HP (+ gaya cetak laporan)
+        bpbd.css    tata letak panel BPBD desktop/tablet/HP
+        cetak.css   laporan cetak A4 (ukuran kertas, margin, nomor halaman)
   js/   config.js   konfigurasi
         core.js     logika status, format waktu/angka, ikon, router
         data.js     lapisan data: simulator, statistik, imbauan
         chart.js    grafik SVG (zona, ambang, tooltip, unduh PNG)
         widgets.js  peta ilustrasi (cadangan), notifikasi, pemilih hari, panel simulator
+        laporan-cetak.js  penyusun dokumen laporan PDF A4
         peta.js     peta interaktif: InaRISK, batas wilayah, zona BPBD (KML/GeoJSON/ArcGIS), sensor, GPS
   data/ zona-contoh.kml   data zona CONTOH (ganti dengan data BPBD)
   vendor/leaflet/   library peta Leaflet 1.9.4 (lisensi BSD-2)

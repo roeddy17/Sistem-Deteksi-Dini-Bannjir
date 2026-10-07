@@ -255,7 +255,7 @@
       ui.$('#r-per').onchange = e => { this.hours = +e.target.value; this.page = 0; this.update(); };
       ui.$('#r-st').onchange = e => { this.status = e.target.value; this.page = 0; this.update(); };
       ui.$('#r-csv').onclick = () => this.csv();
-      ui.$('#r-pdf').onclick = () => window.print();
+      ui.$('#r-pdf').onclick = () => SB.laporanCetak.print(this.printOpts());
     },
     update() {
       const s = D.stats(this.hours), evs = D.getEvents().filter(e => e.t >= Date.now() - this.hours * HOUR && S.rank(e.to) > S.rank(e.from));
@@ -280,6 +280,7 @@
       ui.$('#r-pg').innerHTML = btns.join('');
       ui.$$('#r-pg .pgb').forEach(b => b.onclick = () => { this.page = +b.dataset.p; this.update(); });
     },
+    printOpts() { return { hours: this.hours, label: RANGES.find(r => r[0] === this.hours)[1], status: this.status, rows: this.rows() }; },
     csv() {
       const rows = this.rows();
       const lines = ['Tanggal,Waktu,Ketinggian (' + C.unit + '),Status,Keterangan'].concat(rows.map(r => [F.dateNum(r.t), F.time(r.t), Math.round(r.v), r.s, '"' + (r.note || '') + '"'].join(',')));
@@ -418,6 +419,9 @@
     tick(); paintBadge();
     window.scrollTo(0, 0);
   });
+
+  /* Ctrl+P di halaman Laporan juga mencetak dokumen laporan A4 */
+  window.addEventListener('beforeprint', () => { if (active === laporan && !document.body.classList.contains('has-report')) SB.laporanCetak.build(laporan.printOpts()); });
 
   function tick() { const t = ui.$('#tb-time'); if (t) t.textContent = F.dateFull(Date.now()) + ' · ' + F.time(Date.now()) + ' WIT'; }
   setInterval(tick, 30000);
