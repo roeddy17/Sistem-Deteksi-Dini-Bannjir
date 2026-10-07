@@ -16,10 +16,10 @@ Halaman **Riwayat** (warga) dan **Notifikasi** (BPBD) menampilkan satu hari per 
 **Disarankan (agar sinkronisasi antar-tab dan notifikasi stabil):** jalankan server lokal dari folder ini:
 
 ```
-python -m http.server 8000
+python -m http.server 8001
 ```
 
-lalu buka `http://localhost:8000` di browser. Untuk mencoba dari HP, sambungkan HP ke WiFi yang sama dan buka `http://<IP-laptop>:8000/warga.html`.
+lalu buka `http://localhost:8001` di browser. Untuk mencoba dari HP, sambungkan HP ke WiFi yang sama dan buka `http://<IP-laptop>:8001/warga.html`.
 
 ## Mode simulasi
 
