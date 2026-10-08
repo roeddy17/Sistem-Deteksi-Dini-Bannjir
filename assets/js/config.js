@@ -26,15 +26,19 @@ SB.config = {
   dataSource: 'simulasi',
 
   simulator: {
-    intervalMs: 3000,   // jeda antar pembacaan simulasi
+    intervalMs: 1000,   // jeda antar pembacaan simulasi (meniru sensor yang mengirim tiap 1 detik)
+    response: 1,        // 1 = nilai langsung mengikuti target (seperti sensor); < 1 = naik/turun perlahan
+    logEveryMs: 30000,  // pembacaan disimpan ke riwayat paling sering tiap 30 detik (nilai terkini tetap real-time)
     initialLevel: 15    // ketinggian awal (cm)
   },
 
   /* Diisi pada tahap integrasi Firebase Realtime Database */
   firebase: {
     apiKey: '',
-    databaseURL: '',
-    path: '/sensor'
+    databaseURL: '',               // contoh: https://nama-proyek-default-rtdb.asia-southeast1.firebasedatabase.app
+    path: '/sensor',               // /sensor/latest {level, ts} dan /sensor/history/<id> {level, ts}
+    sdk: 'https://www.gstatic.com/firebasejs/10.14.1/',
+    waitMs: 8000                   // batas tunggu data pertama sebelum tampilan dibuka
   },
 
   /* Klasifikasi zona rawan pada peta: indeks InaRISK (BNPB), skala 0–1 */

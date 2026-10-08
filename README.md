@@ -25,7 +25,7 @@ Jika perubahan kode belum terlihat, tekan **Ctrl+F5** (atau Ctrl+Shift+R) untuk 
 
 ## Mode simulasi
 
-Selama sensor belum terhubung, data berasal dari **simulator** (lihat tombol *Simulator* di pojok kanan bawah):
+Selama sensor belum terhubung, data berasal dari **simulator** (pembacaan tiap 1 detik; perubahan target langsung diterapkan) (lihat tombol *Simulator* di pojok kanan bawah):
 
 - Geser target ketinggian air, atau pilih Aman / Siaga / Bahaya.
 - Perubahan ikut berlaku di tab lain, jadi buka `warga.html` dan `bpbd.html` berdampingan untuk melihat alur lengkap.
@@ -130,19 +130,32 @@ assets/
 | B5 Kirim Imbauan | `bpbd.html#imbauan` | `bpbd.js` → `imbauan` |
 | B6 Notifikasi | `bpbd.html#notifikasi` | `bpbd.js` → `notifikasi` |
 
-## Integrasi Firebase (tahap berikutnya)
+## Integrasi Firebase (real-time)
 
-Tampilan hanya memanggil fungsi pada `SB.data` (`subscribe`, `getCurrent`, `getStatus`, `getHistory`, `getEvents`, `stats`).
-Integrasi cukup membuat `SB.createFirebaseSource()` di `data.js` yang menyediakan fungsi yang sama, lalu mengubah `dataSource` menjadi `firebase`.
+Sumber data `firebase` sudah tersedia di `data.js`. Untuk mengaktifkannya, isi `firebase.databaseURL` (dan `apiKey` bila perlu) di `config.js`, lalu ubah `dataSource` menjadi `firebase`. SDK Firebase dimuat otomatis dari gstatic.
 
-Usulan struktur data di Realtime Database (dikirim oleh ESP8266):
+**Cara kerja (tanpa polling):** browser berlangganan `/sensor/latest` dengan `on('value')`. Firebase menjaga satu koneksi WebSocket tetap terbuka dan **mendorong (push)** data baru begitu alat menulisnya, sehingga semua tampilan (warga dan BPBD) diperbarui seketika. Jeda di sisi tampilan, dari data diterima sampai angka di layar berubah, terukur **±3–5 ms** (uji dengan SDK tiruan). Panel BPBD menampilkan status koneksi dan **jeda server → browser** pada kartu *Sumber data*.
+
+Struktur data yang ditulis ESP8266:
 
 ```
-/sensor/latest           { "level": 15, "ts": 1759600000000 }
-/sensor/history/<id>     { "level": 15, "ts": 1759600000000 }
+/sensor/latest           { "level": 15, "ts": {".sv": "timestamp"} }   ← setiap pembacaan, mis. tiap 1 detik
+/sensor/history/<id>     { "level": 15, "ts": {".sv": "timestamp"} }   ← lebih jarang, mis. tiap 30–60 detik
 ```
 
-`level` adalah ketinggian air dalam cm (jarak sensor HC-SR04 sudah dikonversi menjadi ketinggian pada mikrokontroler).
+`level` adalah ketinggian air dalam cm. `ts` memakai waktu server Firebase agar jeda dapat diukur. Riwayat ditulis lebih jarang supaya data 30 hari tetap ringan dimuat; nilai terkini tetap real-time.
+
+**Perkiraan jeda total alat → layar** (bergantung jaringan, bukan kode tampilan):
+
+| Tahap | Perkiraan |
+|---|---|
+| Interval kirim ESP8266 | sesuai pengaturan alat (mis. 1 detik); ini penentu terbesar |
+| Pengukuran HC-SR04 | ±30–60 ms |
+| ESP8266 → Firebase (WiFi + internet) | ±100–500 ms |
+| Firebase → browser (WebSocket, push) | ±50–300 ms |
+| Data diterima → tampil di layar | ±3–5 ms |
+
+Pilih lokasi database **asia-southeast1 (Singapura)** saat membuat Realtime Database agar jarak ke Jayapura lebih dekat.
 
 ## Keterbatasan yang perlu dicatat
 

@@ -331,7 +331,9 @@
 
   /* ================= ROUTER ================= */
   const views = { beranda, grafik, peta, riwayat, menu };
-  ui.router(Object.keys(views), 'beranda', (name, q) => {
+  /* tampilan dibuka setelah data pertama tersedia (Firebase) — mode simulasi langsung */
+  if (D.kind !== 'simulasi') view.innerHTML = '<p class="empty">Menghubungkan ke sensor…</p>';
+  D.ready.then(() => ui.router(Object.keys(views), 'beranda', (name, q) => {
     if (active && active.leave) active.leave();
     active = views[name];
     document.body.classList.toggle('lock', !!active.lock);
@@ -339,9 +341,10 @@
     ui.$$('.bottom-nav a').forEach(a => a.dataset.r === name ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
     paintNow({});
     window.scrollTo(0, 0);
-  });
+  }));
 
   function paintNow(extra) {
+    if (!active) return;
     let snap = { current: D.getCurrent(), status: D.getStatus() };
     if (offline) { const l = lastSaved(); if (l) snap = { current: l, status: S.of(l.v) }; }
     active.update(snap, extra);

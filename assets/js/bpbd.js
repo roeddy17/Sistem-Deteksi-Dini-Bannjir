@@ -99,9 +99,11 @@
       ui.$('#s-ch-s').textContent = 'dari ' + F.level(s24.ref1h);
       ui.$('#s-max').textContent = F.level(sd.max.v); ui.$('#s-max-s').textContent = 'pukul ' + F.time(sd.max.t);
       ui.$('#s-min').textContent = F.level(sd.min.v); ui.$('#s-min-s').textContent = 'pukul ' + F.time(sd.min.t);
-      ui.$('#s-src').textContent = sim ? 'Simulasi' : 'Terhubung';
-      ui.$('#s-src').className = 'v ' + (sim ? 'c-wr' : 'c-ok');
-      ui.$('#s-src-s').textContent = sim ? 'data uji, bukan pembacaan sensor' : 'via Firebase Realtime Database';
+      const on = D.isConnected(), lat = D.getLatency();
+      ui.$('#s-src').textContent = sim ? 'Simulasi' : on ? 'Terhubung' : 'Terputus';
+      ui.$('#s-src').className = 'v ' + (sim ? 'c-wr' : on ? 'c-ok' : 'c-dg');
+      ui.$('#s-src-s').textContent = sim ? 'data uji, bukan pembacaan sensor'
+        : 'Firebase real-time' + (lat != null ? ` · jeda ${lat < 1000 ? lat + ' ms' : (lat / 1000).toFixed(1).replace('.', ',') + ' dtk'}` : '');
       SB.chart(ui.$('#ch'), D.getHistory(this.hours), { ticks: 6, nowLabel: true, tipTime: true });
       if (extra && extra.changed) this.paintSide();
     }
@@ -416,7 +418,8 @@
 
   /* ================= ROUTER & DATA ================= */
   const views = { dashboard, grafik, peta, laporan, imbauan, notifikasi };
-  ui.router(Object.keys(views), 'dashboard', name => {
+  if (!sim) main.innerHTML = '<p class="empty">Menghubungkan ke sensor…</p>';
+  D.ready.then(() => ui.router(Object.keys(views), 'dashboard', name => {
     if (active && active.leave) active.leave();
     active = views[name];
     document.body.classList.toggle('lock', !!active.lock);
@@ -425,7 +428,7 @@
     active.update(snapNow(), {});
     tick(); paintBadge();
     window.scrollTo(0, 0);
-  });
+  }));
 
   /* Ctrl+P di halaman Laporan juga mencetak dokumen laporan A4 */
   window.addEventListener('beforeprint', () => { if (active === laporan && !document.body.classList.contains('has-report')) SB.laporanCetak.build(laporan.printOpts()); });

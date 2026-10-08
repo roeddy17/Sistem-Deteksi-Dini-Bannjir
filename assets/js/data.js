@@ -3,9 +3,10 @@
  * ------------------------------------------------------------------
  * Tampilan hanya berbicara dengan objek SB.data melalui fungsi:
  *   subscribe(fn), getCurrent(), getStatus(), getHistory(jam),
- *   getEvents(), stats(jam)
- * Sumber 'simulasi' menghasilkan data uji. Pada tahap integrasi,
- * sumber 'firebase' cukup menyediakan fungsi yang sama.
+ *   getEvents(), stats(jam), ready (Promise), getLatency(), isConnected()
+ * Sumber 'simulasi' menghasilkan data uji. Sumber 'firebase' mendengarkan
+ * Firebase Realtime Database secara push (tanpa polling): setiap kali alat
+ * menulis /sensor/latest, semua tampilan yang terbuka diperbarui seketika.
  */
 (function () {
   const C = SB.config, S = SB.status;
@@ -36,6 +37,7 @@
 
   function deriveEvents(history) {
     const ev = [];
+    if (!history.length) return ev;
     let prev = S.of(history[0].v);
     for (const p of history) {
       const s = S.of(p.v);
@@ -48,7 +50,7 @@
     return function stats(hours, fromTime) {
       const pts = fromTime != null ? getHistory(null, fromTime) : getHistory(hours);
       const cur = getCurrent();
-      if (!pts.length) return null;
+      if (!pts.length) pts.push(cur);                 // belum ada riwayat: pakai nilai terkini
       let max = pts[0], min = pts[0], sum = 0, above = 0;
       const dist = { AMAN: 0, SIAGA: 0, BAHAYA: 0 };
       pts.forEach((p, i) => {
@@ -80,20 +82,25 @@
 
     const subs = new Set();
     const ch = 'BroadcastChannel' in window ? new BroadcastChannel('siagabanjir-sim') : null;
-    if (ch) ch.onmessage = e => { if (e.data && e.data.type === 'target') { target = e.data.value; emit({}); } };
+    if (ch) ch.onmessage = e => { if (e.data && e.data.type === 'target') { target = e.data.value; tick(); } };
 
     const snapshot = () => ({ current, status, target });
     const emit = extra => subs.forEach(fn => fn(snapshot(), extra));
 
+    /* riwayat tersimpan + nilai terkini (agar grafik selalu sampai detik ini) */
     function getHistory(hours, fromTime) {
       const from = fromTime != null ? fromTime : Date.now() - hours * HOUR;
-      return history.filter(p => p.t >= from);
+      const out = history.filter(p => p.t >= from);
+      if (current.t >= from && (!out.length || out[out.length - 1].t < current.t)) out.push(current);
+      return out;
     }
 
+    const resp = C.simulator.response != null ? C.simulator.response : 1;
     function tick() {
-      const v = clamp(current.v + (target - current.v) * 0.35 + rnd(0.15));
+      const v = clamp(current.v + (target - current.v) * resp + rnd(0.15));
       current = { t: Date.now(), v };
-      history.push(current);
+      const last = history[history.length - 1];
+      if (!last || current.t - last.t >= (C.simulator.logEveryMs || 30000) || S.of(v) !== status) history.push(current);
       while (history.length && history[0].t < Date.now() - 31 * DAY) history.shift();
       const prev = status; status = S.of(v);
       let changed = null;
@@ -107,6 +114,9 @@
 
     const api = {
       kind: 'simulasi',
+      ready: Promise.resolve(),
+      getLatency: () => null,
+      isConnected: () => true,
       subscribe(fn) { subs.add(fn); fn(snapshot(), {}); return () => subs.delete(fn); },
       getCurrent: () => current,
       getStatus: () => status,
@@ -117,7 +127,7 @@
         target = clamp(v);
         localStorage.setItem('sb-sim-target', String(target));
         if (ch) ch.postMessage({ type: 'target', value: target });
-        emit({});
+        tick();                                  // langsung diterapkan, tanpa menunggu jadwal berikutnya
       }
     };
     api.stats = makeStats(getHistory, () => current);
@@ -125,8 +135,95 @@
   };
 
   /* ---------- Sumber data: Firebase (tahap integrasi) ---------- */
+  function loadScript(src) {
+    return new Promise((res, rej) => {
+      const el = document.createElement('script');
+      el.src = src; el.onload = res; el.onerror = () => rej(new Error('Gagal memuat ' + src));
+      document.head.appendChild(el);
+    });
+  }
+
+  /*
+   * Alat (ESP8266) menulis:
+   *   /sensor/latest        { level: <cm>, ts: <waktu> }   ← setiap pembacaan (mis. tiap 1 detik)
+   *   /sensor/history/<id>  { level: <cm>, ts: <waktu> }   ← lebih jarang (mis. tiap 30–60 detik)
+   * ts sebaiknya memakai waktu server Firebase ({".sv": "timestamp"}) agar jeda dapat diukur.
+   * Browser berlangganan /sensor/latest dengan on('value'): Firebase mengirim (push) data baru
+   * lewat koneksi WebSocket yang tetap terbuka, jadi tidak ada jeda polling.
+   */
   SB.createFirebaseSource = function () {
-    throw new Error('Integrasi Firebase belum diaktifkan. Lihat README, bagian "Integrasi Firebase".');
+    const FB = C.firebase || {};
+    if (!FB.databaseURL) throw new Error('Firebase databaseURL belum diisi di config.js.');
+    const base = '/' + String(FB.path || '/sensor').replace(/^\/+|\/+$/g, '');
+    const subs = new Set();
+    let history = [], events = [], current = null, status = 'AMAN', connected = false, latency = null, offset = 0, lastLog = 0;
+    try { const c = JSON.parse(localStorage.getItem('sb-last')); if (c && isFinite(c.v)) current = c; } catch (e) { /* abaikan */ }
+    if (!current) current = { t: Date.now(), v: 0, placeholder: true };
+    status = S.of(current.v);
+
+    const snapshot = () => ({ current, status, connected, latency });
+    const emit = extra => subs.forEach(fn => fn(snapshot(), extra));
+    const serverNow = () => Date.now() + offset;
+
+    function getHistory(hours, fromTime) {
+      const from = fromTime != null ? fromTime : serverNow() - hours * HOUR;
+      const out = history.filter(p => p.t >= from);
+      if (!current.placeholder && current.t >= from && (!out.length || out[out.length - 1].t < current.t)) out.push(current);
+      return out;
+    }
+    const valid = d => d && isFinite(+d.level);
+
+    let resolveReady;
+    const ready = new Promise(r => { resolveReady = r; });
+    setTimeout(() => resolveReady(), FB.waitMs || 8000);   // jangan menahan tampilan terlalu lama
+
+    function onLatest(d) {
+      if (!valid(d)) return;
+      const t = isFinite(+d.ts) && +d.ts > 0 ? +d.ts : serverNow();
+      latency = Math.max(0, serverNow() - t);
+      if (!current.placeholder && t === current.t && +d.level === current.v) return;
+      current = { t, v: +d.level };
+      try { localStorage.setItem('sb-last', JSON.stringify(current)); } catch (e) { /* abaikan */ }
+      const prev = status; status = S.of(current.v);
+      let changed = null;
+      if (prev !== status && lastLog) {   // lastLog > 0: riwayat sudah dimuat, perubahan ini nyata
+        changed = { id: 'e' + t, t, type: 'status', from: prev, to: status, level: current.v };
+        events.unshift(changed);
+      }
+      resolveReady();
+      emit({ changed });
+    }
+
+    loadScript(FB.sdk + 'firebase-app-compat.js')
+      .then(() => loadScript(FB.sdk + 'firebase-database-compat.js'))
+      .then(() => {
+        const app = firebase.apps.length ? firebase.app() : firebase.initializeApp({ apiKey: FB.apiKey || undefined, databaseURL: FB.databaseURL });
+        const db = app.database();
+        db.ref('.info/serverTimeOffset').on('value', s => { offset = s.val() || 0; });
+        db.ref('.info/connected').on('value', s => { connected = !!s.val(); emit({}); });
+        db.ref(base + '/history').orderByChild('ts').startAt(Date.now() - 31 * DAY).limitToLast(20000).once('value').then(snap => {
+          const pts = [];
+          snap.forEach(c => { const d = c.val(); if (valid(d) && isFinite(+d.ts)) pts.push({ t: +d.ts, v: +d.level }); });
+          pts.sort((a, b) => a.t - b.t);
+          history = pts; events = deriveEvents(history); lastLog = Date.now();
+          emit({});
+        }).catch(err => console.warn('Riwayat Firebase:', err.message));
+        db.ref(base + '/latest').on('value', s => onLatest(s.val()), err => console.warn('Data terkini Firebase:', err.message));
+      })
+      .catch(err => { console.warn(err.message); resolveReady(); emit({ error: err.message }); });
+
+    const api = {
+      kind: 'firebase', ready,
+      subscribe(fn) { subs.add(fn); fn(snapshot(), {}); return () => subs.delete(fn); },
+      getCurrent: () => current,
+      getStatus: () => status,
+      getHistory,
+      getEvents: () => events,
+      getLatency: () => latency,
+      isConnected: () => connected
+    };
+    api.stats = makeStats(getHistory, () => current);
+    return api;
   };
 
   try {
