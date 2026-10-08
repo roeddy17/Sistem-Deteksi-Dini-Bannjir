@@ -31,7 +31,7 @@
         title: e.to === 'AMAN' ? 'Status kembali AMAN' : (up ? 'Status naik ke ' : 'Status turun ke ') + e.to,
         desc: `Ketinggian air ${F.level(e.level)}${e.to === 'BAHAYA' ? ' · bunyi dan getar dikirim ke warga' : ''}` };
     });
-    const im = SB.imbauan.sent().map(i => ({ t: i.t, kind: 'IMBAUAN', cls: 'pri', icon: 'mega', pill: ui.tag('IMBAUAN', 'pri'), title: 'Imbauan terkirim', desc: `“${i.judul}” · ke semua pengguna` }));
+    const im = SB.imbauan.sent().map(i => ({ t: i.t, kind: 'IMBAUAN', cls: 'pri', icon: 'mega', pill: ui.tag('IMBAUAN', 'pri'), title: 'Imbauan terkirim', desc: `“${i.judul}” · ${i.target === 'SEMUA' ? 'tampil pada semua status' : 'tampil saat status ' + i.target}` }));
     return ev.concat(im).sort((a, b) => b.t - a.t);
   }
   /* kunjungan pertama: notifikasi lebih lama dari 6 jam dianggap sudah dibaca */
@@ -79,8 +79,9 @@
     },
     paintSide() {
       const it = SB.imbauan.latest(), box = ui.$('#imb');
-      box.innerHTML = `<div class="row-c"><span class="badge b-solid">${I('mega', 17)}</span><h2 class="h2 grow c-pri-d">Imbauan aktif</h2>${it ? ui.tag('TERKIRIM', 'ok') : ''}</div>
-        ${it ? `<p>${esc(it.isi)}</p><p class="muted sm">Dikirim ${F.time(it.t)} · ke semua pengguna</p>` : '<p class="sub">Belum ada imbauan yang dikirim.</p>'}
+      const live = it && (it.target === 'SEMUA' || S.rank(D.getStatus()) >= S.rank(it.target));
+      box.innerHTML = `<div class="row-c"><span class="badge b-solid">${I('mega', 17)}</span><h2 class="h2 grow c-pri-d">Imbauan terakhir</h2>${it ? (live ? ui.tag('TAMPIL DI WARGA', 'ok') : ui.tag('MENUNGGU ' + it.target, 'wr')) : ''}</div>
+        ${it ? `<p>${esc(it.isi)}</p><p class="muted sm">Dikirim ${F.time(it.t)} · ${it.target === 'SEMUA' ? 'tampil pada semua status' : 'tampil saat status ' + it.target}</p>` : '<p class="sub">Belum ada imbauan yang dikirim.</p>'}
         <a class="btn btn-pri" href="#imbauan">${I('plus', 16)}Kirim imbauan baru</a>`;
       ui.$('#mini-feed').innerHTML = feed().slice(0, 3).map(i => `
         <div class="li ai-c"><span class="badge b-${i.cls}">${I(i.icon, 16)}</span><div class="grow"><strong class="sm">${i.title}</strong><p class="sm sub">${esc(i.desc)}</p></div><span class="muted sm">${F.dayLabel(i.t) === 'Hari ini' ? F.time(i.t) : F.dayLabel(i.t).toLowerCase()}</span></div>`).join('');
@@ -343,8 +344,10 @@
         if (!judul.value.trim() || !isi.value.trim()) { err.textContent = 'Lengkapi judul dan isi pesan sebelum mengirim.'; err.hidden = false; (judul.value.trim() ? isi : judul).focus(); return; }
         err.hidden = true;
         SB.imbauan.add({ judul: judul.value.trim(), isi: isi.value.trim(), target: this.target, push: ui.$('#f-push').checked, beranda: ui.$('#f-ber').checked, status });
+        const now = this.target === 'SEMUA' || S.rank(D.getStatus()) >= S.rank(this.target);
         SB.notify.toast(status === 'TERKIRIM'
-          ? { title: 'Imbauan terkirim', body: 'Pesan tampil di web warga dan dikirim sebagai notifikasi.', cls: 'ok', icon: 'send' }
+          ? (now ? { title: 'Imbauan terkirim', body: 'Pesan tampil di web warga' + (ui.$('#f-push').checked ? ' dan dikirim sebagai notifikasi.' : '.'), cls: 'ok', icon: 'send' }
+            : { title: 'Imbauan dijadwalkan', body: `Status saat ini ${D.getStatus()}. Pesan akan tampil dan dikirim ke warga saat status mencapai ${this.target}.`, cls: 'pri', icon: 'send' })
           : { title: 'Draf tersimpan', body: 'Draf dapat dikirim kemudian.', cls: 'pri', icon: 'save' });
         judul.value = ''; isi.value = ''; preview(); this.paintHist();
       };

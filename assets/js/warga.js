@@ -10,6 +10,23 @@
   const saveLast = snap => { try { localStorage.setItem('sb-last', JSON.stringify(snap.current)); } catch (e) { /* abaikan */ } };
   const lastSaved = () => { try { return JSON.parse(localStorage.getItem('sb-last')); } catch (e) { return null; } };
 
+  /* Imbauan BPBD baru "diterima" warga saat status sudah mencapai status sasarannya
+     (SEMUA = langsung). Waktu diterima disimpan agar notifikasi tidak berulang. */
+  const RECV_KEY = 'sb-imb-terima';
+  let recv = (() => { try { return JSON.parse(localStorage.getItem(RECV_KEY)); } catch (e) { return null; } })();
+  const saveRecv = () => { try { localStorage.setItem(RECV_KEY, JSON.stringify(recv)); } catch (e) { /* abaikan */ } };
+  if (!recv) { recv = {}; SB.imbauan.sent().forEach(i => { recv[i.id] = i.t; }); saveRecv(); }   // kunjungan pertama: imbauan lama dianggap sudah diterima
+  const applies = (i, st) => i.target === 'SEMUA' || S.rank(st) >= S.rank(i.target);
+  function deliver(st, notify) {
+    try { recv = Object.assign(JSON.parse(localStorage.getItem(RECV_KEY)) || {}, recv); } catch (e) { /* abaikan */ }   // tab lain mungkin sudah menerima
+    const fresh = SB.imbauan.sent().filter(i => recv[i.id] == null && applies(i, st));
+    fresh.forEach(i => { recv[i.id] = Date.now(); });
+    if (fresh.length) saveRecv();
+    if (notify) fresh.filter(i => i.push !== false).forEach(i => SB.notify.alertImbauan(i));
+    return fresh.length;
+  }
+  const received = () => SB.imbauan.sent().filter(i => recv[i.id] != null);
+
   const subHeader = (title, sub, back = '#beranda') =>
     `<header class="subhead"><a class="back" href="${back}" aria-label="Kembali">${I('back', 20)}</a><div><h1>${title}</h1><p>${sub}</p></div></header>`;
 
@@ -84,7 +101,7 @@
       const el = ui.$('#imb'); if (!el) return;
       /* tampil jika status saat ini sudah mencapai status sasaran imbauan */
       const st = D.getStatus();
-      const it = SB.imbauan.sent().find(i => i.beranda !== false && (i.target === 'SEMUA' || S.rank(st) >= S.rank(i.target)));
+      const it = received().find(i => i.beranda !== false && applies(i, st));
       el.hidden = !it; if (!it) return;
       el.innerHTML = `<span class="badge b-solid">${I('mega', 18)}</span>
         <div class="imb-b"><div class="row-sb"><strong>Imbauan BPBD</strong><span class="muted">${F.time(it.t)}</span></div><p>${esc(it.isi)}</p></div>`;
@@ -264,7 +281,7 @@
         desc: `Ketinggian air ${e.to === 'AMAN' ? 'turun ke' : 'mencapai'} ${F.level(e.level)}.`
       };
     });
-    const im = SB.imbauan.sent().map(i => ({ t: i.t, kind: 'IMBAUAN', pill: ui.tag('IMBAUAN', 'pri'), cls: 'pri', icon: 'mega', title: 'Imbauan BPBD', desc: i.isi }));
+    const im = received().map(i => ({ t: Math.max(i.t, recv[i.id]), kind: 'IMBAUAN', pill: ui.tag('IMBAUAN', 'pri'), cls: 'pri', icon: 'mega', title: 'Imbauan BPBD', desc: i.isi }));
     return ev.concat(im).sort((a, b) => b.t - a.t);
   }
   /* Satu hari per tampilan; daftar bergulir di dalam kartu, layar utama tetap diam */
@@ -355,13 +372,18 @@
     if (offline) return;                       // saat offline, tampilan memakai data terakhir
     saveLast(snap);
     if (active) active.update(snap, extra);
-    if (extra && extra.changed) SB.notify.alertStatus(extra.changed);
+    if (extra && extra.changed) {
+      SB.notify.alertStatus(extra.changed);
+      /* status naik: imbauan yang menunggu status ini sekarang diterima */
+      if (deliver(snap.status, true)) { if (active === beranda) beranda.paintImbauan(); if (active === riwayat) riwayat.paint(); }
+    }
   });
-  SB.imbauan.subscribe(item => {
-    if (item && item.status === 'TERKIRIM') SB.notify.alertImbauan(item);
+  SB.imbauan.subscribe(() => {
+    deliver(D.getStatus(), true);             // hanya imbauan yang sasarannya sudah tercapai
     if (active === beranda) beranda.paintImbauan();
     if (active === riwayat) riwayat.paint();
   });
+  D.ready.then(() => { if (deliver(D.getStatus(), true) && active) paintNow({ changed: null }); });
 
   /* Status koneksi */
   const banner = document.getElementById('offline-banner');
