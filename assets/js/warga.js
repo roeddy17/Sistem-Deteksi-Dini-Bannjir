@@ -191,7 +191,7 @@
           ${live ? `<button type="button" class="map-fab" id="loc-btn" aria-label="Lokasi saya" title="Lokasi saya">${I('locate', 20)}</button>` : ''}
           <p class="map-note" id="map-note">${live ? 'Memuat data zona…' : 'Ilustrasi · rencana titik pemasangan sensor'}</p>
         </div>
-        <div class="legend" id="legend" ${this.zones ? '' : 'hidden'}><span class="muted">Indeks InaRISK:</span>${C.zoneIndex.map(z => `<span class="lg lg-${z.key}">${z.label} ${z.range}</span>`).join('')}</div>
+        <div class="legend" id="legend" ${this.zones ? '' : 'hidden'}><span class="muted">${live ? 'Zona bahaya banjir:' : 'Indeks InaRISK:'}</span>${C.zoneIndex.map(z => `<span class="lg lg-${z.key}">${z.label}${live ? '' : ' ' + z.range}</span>`).join('')}</div>
         ${live && C.map.poi && C.map.poi.url ? `<div class="legend poi-legend" id="poi-legend" ${this.poi ? '' : 'hidden'}>${SB.peta.POI_CAT.map(c => `<span class="lg-poi" style="--c:${c.col}"><i>${I(c.icon, 10)}</i>${c.label}</span>`).join('')}<span class="muted" id="poi-hint"></span></div>` : ''}
         ${live ? `<article class="card loc-res" id="loc-res">
           <div class="row-c"><span class="badge b-pri lg" id="lr-ic">${I('locate', 20)}</span>
@@ -208,11 +208,11 @@
       ui.$('#zone-t').onclick = () => {
         this.zones = !this.zones; ui.$('#zone-t').setAttribute('aria-pressed', String(this.zones));
         ui.$('#legend').hidden = !this.zones;
-        if (this.lm) { this.lm.setZones(this.zones); this.lm.setInarisk(this.zones); } else this.update({ current: D.getCurrent(), status: D.getStatus() });
+        if (this.lm) this.lm.setZones(this.zones); else this.update({ current: D.getCurrent(), status: D.getStatus() });
       };
       if (!live) return;
       const lm = this.lm = SB.liveMap(ui.$('#lmap'), {
-        zones: this.zones, inarisk: this.zones, base: this.base,
+        zones: this.zones, inarisk: false, base: this.base,   // warga: zona BPBD ditampilkan; nilai InaRISK tetap dibaca saat diketuk
         onZones: info => { this.zinfo = info; this.paintNote(); },
         onLayers: st => { this.lst = st; this.paintNote(); },
         poi: this.poi, onPoi: st => { const h = ui.$('#poi-hint'); if (h) h.textContent = POI_HINT[st] || ''; },
@@ -241,8 +241,8 @@
     paintNote() {
       const n = ui.$('#map-note'), info = this.zinfo || {}, st = this.lst || {}; if (!n) return;
       const parts = [];
-      if (info.fc) parts.push(info.sample ? 'Zona contoh (bukan data BPBD)' : 'Zona rawan BPBD');
-      if (info.inarisk) parts.push(st.inarisk === false ? 'Layer InaRISK gagal dimuat' : 'Indeks bahaya: InaRISK BNPB');
+      if (info.fc) parts.push(info.sample ? 'Zona contoh (bukan data BPBD)' : 'Zona bahaya banjir: BPBD Prov. Papua');
+      else if (info.inarisk) parts.push(st.inarisk === false ? 'Layer InaRISK gagal dimuat' : 'Indeks bahaya: InaRISK BNPB');
       n.textContent = info.error || parts.join(' · ') || 'Memuat data zona…';
       n.classList.toggle('warn', !!(info.error || info.sample || st.inarisk === false));
     },

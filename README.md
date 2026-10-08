@@ -79,7 +79,9 @@ Halaman Peta (warga dan BPBD) memakai **Leaflet** (library JavaScript peta, disi
 - **Cek lokasi saya** (GPS): menampilkan posisi pengguna, zona tempatnya berada (zona BPBD diutamakan, lalu indeks InaRISK), dan nilai indeks InaRISK di titik itu. GPS hanya berjalan di `https://` (misalnya GitHub Pages) atau `localhost`;
 - mode simulasi: tombol **Uji: ketuk peta** untuk mencoba hasil cek zona di titik mana pun tanpa GPS.
 
-Data zona contoh di `assets/data/zona-contoh.kml` hanya dipakai bila layer InaRISK dikosongkan.
+**Zona rawan banjir BPBD** (`assets/data/zona-bpbd-banjir-jayapura.kml`) diolah dari `banjir_jpr.kmz` kiriman Manajer Pusdalops BPBD Provinsi Papua (Oktober 2026): 3 kelas (`Kls_Bahaya` Rendah/Sedang/Tinggi), 1.206 area di Kota Jayapura. Berkas asli disimpan di `assets/data/banjir_jpr.kmz`; versi web hanya membulatkan koordinat ke 6 desimal dan menyederhanakan atribut. Zona BPBD menjadi acuan utama; indeks InaRISK ditampilkan sebagai pembanding (di tampilan warga lapisannya disembunyikan, tetapi nilainya tetap dibaca saat peta diketuk atau cek lokasi).
+
+Data zona contoh di `assets/data/zona-contoh.kml` tidak lagi dipakai (untuk pengujian saja).
 
 **Menambahkan zona rawan (area) dari BPBD** (`assets/js/config.js`, bagian `map`):
 

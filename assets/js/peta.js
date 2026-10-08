@@ -128,7 +128,8 @@
     fc.features = (fc.features || []).filter(f => f.geometry && /Polygon/.test(f.geometry.type));
     fc.features.forEach(f => { f.properties = f.properties || {}; f.zone = classify(f.properties); f.index = indexOf(f.properties); });
     const counts = { rendah: 0, sedang: 0, tinggi: 0, lain: 0 };
-    fc.features.forEach(f => counts[f.zone || 'lain']++);
+    fc.features.forEach(f => { counts[f.zone || 'lain'] += f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates.length : 1; });
+    counts.total = counts.rendah + counts.sedang + counts.tinggi + counts.lain;
     return { fc, source, counts, sample: source === 'file' && M.zonesSample, loadedAt: Date.now() };
   }
   function loadZones() {
@@ -326,14 +327,7 @@
   const gmapsUrl = (lat, lng) => `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
   const gmapsDir = (lat, lng) => `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 
-  function zonePopup(f, src) {
-    const p = f.properties, z = f.zone;
-    return `<div class="pp"><span class="pill pill-${z ? ZCLS[z] : 'mute'}">${z ? 'BAHAYA ' + ZLABEL[z].toUpperCase() : 'KELAS TIDAK DIKENALI'}</span>
-      <strong>${esc(p.name || p.NAMA || p.nama || 'Zona rawan banjir')}</strong>
-      ${f.index != null ? `<span>Indeks bahaya ${String(f.index).replace('.', ',')}</span>` : ''}
-      <span class="muted">${src}</span></div>`;
-  }
-  const SRC_LABEL = { arcgis: 'Sumber: ArcGIS Online BPBD', mymaps: 'Sumber: My Maps BPBD', file: 'Sumber: data peta BPBD' };
+  const SRC_LABEL = { arcgis: 'Sumber: ArcGIS Online BPBD', mymaps: 'Sumber: My Maps BPBD', file: 'Sumber: peta BPBD' };
 
   /*
    * SB.liveMap(el, opts) → api
@@ -388,18 +382,26 @@
     const toggle = (layer, on) => { if (!layer) return; if (on) layer.addTo(map); else map.removeLayer(layer); };
     toggle(inarisk, show.inarisk); toggle(admin, show.admin);
 
-    /* Ketuk peta: nilai indeks InaRISK dan nama wilayah di titik itu (data resmi BNPB) */
+    /* Ketuk peta: zona BPBD, nilai indeks InaRISK, dan nama wilayah di titik itu.
+       Nilai InaRISK tetap dibaca walau lapisannya disembunyikan. */
     map.on('click', async e => {
-      if (testMode || (!(inarisk && show.inarisk) && !M.adminUrl)) return;
-      const cur = inarisk && show.inarisk ? idx : null;
-      const pop = L.popup().setLatLng(e.latlng).setContent('<div class="pp"><span class="muted">Membaca data InaRISK…</span></div>').openOn(map);
-      const [r, w] = await Promise.all([cur ? inariskAt(e.latlng.lat, e.latlng.lng, cur.url) : null, adminAt(e.latlng.lat, e.latlng.lng)]);
+      if (testMode) return;
+      const { lat, lng } = e.latlng;
+      const f = zoneInfo && show.zones ? zoneAt(zoneInfo.fc, lat, lng) : null;
+      const cur = inarisk ? (show.inarisk ? idx : IDX[0]) : null;
+      if (!f && !cur && !M.adminUrl) return;
+      const pop = L.popup().setLatLng(e.latlng).setContent('<div class="pp"><span class="muted">Membaca data lokasi…</span></div>').openOn(map);
+      const [r, w] = await Promise.all([cur ? inariskAt(lat, lng, cur.url) : null, adminAt(lat, lng)]);
       if (!map.hasLayer(pop)) return;
-      const word = cur && cur.key === 'bahaya' || cur && cur.key === 'bandang' ? 'BAHAYA' : cur && cur.key === 'risiko' ? 'RISIKO' : cur && cur.key === 'kerentanan' ? 'KERENTANAN' : 'KELAS';
-      const idxHtml = !cur ? '' : r.error ? `<strong>${cur.label}</strong><span>Maaf, ${r.error}.</span>`
+      const word = cur && cur.key === 'risiko' ? 'RISIKO' : cur && cur.key === 'kerentanan' ? 'KERENTANAN' : 'BAHAYA';
+      const bpbd = f ? `<span class="pill pill-${f.zone ? ZCLS[f.zone] : 'mute'}">${f.zone ? 'BAHAYA ' + ZLABEL[f.zone].toUpperCase() : 'KELAS TIDAK DIKENALI'}</span>
+          <strong>Zona rawan banjir BPBD</strong><span class="muted">${zoneInfo.sample ? 'Data contoh, bukan data BPBD' : esc(M.zonesLabel || SRC_LABEL[zoneInfo.source])}</span>`
+        : zoneInfo && show.zones && !zoneInfo.sample ? '<strong>Di luar zona rawan BPBD</strong>' : '';
+      const ir = !cur ? '' : r.error ? `<span>${cur.label}: ${r.error}.</span>`
+        : f ? `<span>${cur.label} InaRISK: ${r.value == null ? 'tidak ada nilai' : fmtIdx(r.value) + (r.zone ? ' (' + ZLABEL[r.zone] + ')' : '')}</span>`
         : `<span class="pill pill-${r.zone ? ZCLS[r.zone] : 'mute'}">${r.zone ? word + ' ' + ZLABEL[r.zone].toUpperCase() : 'TIDAK ADA NILAI'}</span>
-          <strong>${cur.label}</strong><span>${r.value == null ? 'Tidak ada nilai indeks di titik ini' : 'Nilai indeks ' + fmtIdx(r.value)}</span>`;
-      pop.setContent(`<div class="pp">${idxHtml}${w ? `<span class="pp-w">${SB.icon('pin', 12)}${esc(w.text)}</span>` : ''}<span class="muted">Sumber: InaRISK BNPB</span></div>`);
+          <strong>${cur.label} (InaRISK)</strong><span>${r.value == null ? 'Tidak ada nilai indeks di titik ini' : 'Nilai indeks ' + fmtIdx(r.value)}</span>`;
+      pop.setContent(`<div class="pp">${bpbd}${ir}${w ? `<span class="pp-w">${SB.icon('pin', 12)}${esc(w.text)}</span>` : ''}</div>`);
     });
 
     /* zona rawan (poligon BPBD) */
@@ -410,11 +412,11 @@
     loadZones().then(info => {
       zoneInfo = info;
       if (!info) { if (opts.onZones) opts.onZones({ none: true, inarisk: !!inarisk }); return; }
+      /* kanvas: ribuan poligon tetap ringan digambar; klik diteruskan ke peta (popup gabungan) */
       zonesLayer = L.geoJSON(info.fc, {
-        style: f => ({ color: ZCOL[f.zone || 'lain'], weight: 1.5, fillColor: ZCOL[f.zone || 'lain'], fillOpacity: f.zone === 'tinggi' ? 0.38 : 0.3 }),
-        onEachFeature: (f, layer) => layer.bindPopup(() => zonePopup(f, info.sample ? 'Data contoh, bukan data BPBD' : SRC_LABEL[info.source]))
+        renderer: L.canvas({ padding: 0.3 }),
+        style: f => ({ color: ZCOL[f.zone || 'lain'], weight: 0.8, opacity: 0.9, fillColor: ZCOL[f.zone || 'lain'], fillOpacity: f.zone === 'tinggi' ? 0.5 : 0.4 })
       });
-      zonesLayer.on('click', pick);   // klik pada poligon tidak diteruskan ke peta karena popup
       if (show.zones) zonesLayer.addTo(map);
       if (opts.onZones) opts.onZones(Object.assign({ inarisk: !!inarisk }, info));
     }).catch(err => { if (opts.onZones) opts.onZones({ error: err.message }); });

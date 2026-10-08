@@ -58,8 +58,8 @@ SB.config = {
    *   2. myMapsId       — My Maps publik (dicoba dibaca langsung; bila diblokir browser,
    *                        otomatis memakai berkas di zonesFile)
    *   3. zonesFile      — berkas .kml atau .geojson di folder assets/data (KMZ diekstrak dulu menjadi KML)
-   * Selama data BPBD belum ada, zonesFile berisi DATA CONTOH (bukan data BPBD); data contoh
-   * tidak ditampilkan bila layer InaRISK di bawah aktif.
+   * zona-contoh.kml adalah DATA CONTOH (bukan data BPBD); bila zonesSample true, data contoh
+   * tidak ditampilkan selama layer InaRISK aktif.
    */
   map: {
     /* Indeks bahaya banjir resmi InaRISK (BNPB), layanan ArcGIS ImageServer publik.
@@ -87,11 +87,11 @@ SB.config = {
 
     arcgisLayerUrl: '',                        // contoh: https://services.arcgis.com/xxx/arcgis/rest/services/Bahaya_Banjir/FeatureServer/0
     myMapsId: '',                              // nilai "mid=" pada tautan My Maps
-    zonesFile: 'assets/data/zona-contoh.kml',
-    zonesSample: true,                         // true = berkas di atas adalah data contoh (diberi label di peta)
-
+    zonesFile: 'assets/data/zona-bpbd-banjir-jayapura.kml',   // dari banjir_jpr.kmz (BPBD Prov. Papua, Okt 2026)
+    zonesSample: false,                        // true = berkas di atas adalah data contoh (zona-contoh.kml)
+    zonesLabel: 'Peta bahaya banjir BPBD Prov. Papua (Okt 2026)',
     /* Kolom atribut yang berisi kelas zona (teks "Rendah/Sedang/Tinggi") atau indeks 0–1.
        Kosongkan untuk deteksi otomatis (KELAS, kelas, class, INDEKS, indeks, index, name, ...) */
-    zoneField: ''
+    zoneField: 'Kls_Bahaya'                    // kolom kelas zona pada data BPBD
   }
 };
