@@ -187,17 +187,24 @@ Pilih lokasi database **asia-southeast1 (Singapura)** saat membuat Realtime Data
 
 ## Notifikasi push (peringatan saat browser ditutup)
 
-Warga yang mengaktifkan notifikasi di menu **Menu → Notifikasi** akan menerima peringatan SIAGA/BAHAYA dan imbauan BPBD lewat Firebase Cloud Messaging, walau tab/browser ditutup. Pengirimnya Cloud Functions (`functions/`).
+Warga yang mengaktifkan notifikasi di **Menu → Notifikasi** menerima peringatan SIAGA/BAHAYA dan imbauan BPBD lewat Firebase Cloud Messaging (FCM), walau tab/browser ditutup. Pengirimnya ada dua pilihan dengan logika yang sama:
+
+- **`worker/` — Cloudflare Workers (dipakai, gratis tanpa kartu).** Berjalan terjadwal tiap menit, jadi peringatan tiba paling lambat sekitar 1 menit setelah status berubah.
+- `functions/` — Firebase Cloud Functions (real-time, tetapi butuh paket Blaze). Disimpan sebagai alternatif.
 
 Pengaturan sekali saja:
-1. Firebase Console → upgrade ke paket **Blaze** (kuota gratis cukup untuk skala prototipe).
-2. Project settings → General → Your apps → Web app: salin `messagingSenderId` dan `appId` ke `assets/js/config.js`.
-3. Project settings → Cloud Messaging → pastikan **Firebase Cloud Messaging API (V1)** aktif, lalu buat **Web Push certificate** dan salin key pair ke `vapidKey` di `config.js`.
-4. Deploy:
+1. Firebase Console → Project settings → General → Your apps → Web app: salin `messagingSenderId` dan `appId` ke `assets/js/config.js`.
+2. Project settings → Cloud Messaging: pastikan **Firebase Cloud Messaging API (V1)** aktif, buat **Web Push certificate**, salin key pair ke `vapidKey` di `config.js`.
+3. Project settings → Service accounts → **Generate new private key** (file JSON; jangan di-commit).
+4. Deploy aturan database (`firebase-rules.json`) lewat Console → Realtime Database → Rules.
+5. Deploy worker:
    ```
-   npm i -g firebase-tools
-   firebase login
-   cd functions && npm install && cd ..
-   firebase deploy --only functions,database
+   cd worker
+   npx wrangler login
+   npx wrangler secret put FIREBASE_SECRET       # database secret yang sama dengan di alat
+   npx wrangler secret put FCM_SERVICE_ACCOUNT   # tempel isi file JSON (satu baris)
+   npx wrangler deploy
    ```
-5. iPhone: notifikasi hanya jalan setelah situs ditambahkan ke Layar Utama (Add to Home Screen).
+6. iPhone: notifikasi hanya jalan setelah situs ditambahkan ke Layar Utama.
+
+Uji logika: `node worker/test.mjs`.
