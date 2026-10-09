@@ -25,7 +25,12 @@
       const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
       if (perm !== 'granted') return perm;
       await SB.loadScript(FB.sdk + 'firebase-messaging-compat.js');
-      const app = await SB.data.app;
+      await SB.data.app;   /* memastikan SDK Firebase sudah dimuat */
+      /* FCM butuh konfigurasi lengkap (projectId, appId, messagingSenderId); app data hanya berisi databaseURL */
+      const app = firebase.apps.find(a => a.name === 'siagabanjir-push') || firebase.initializeApp({
+        apiKey: FB.apiKey, authDomain: FB.authDomain, databaseURL: FB.databaseURL,
+        projectId: FB.projectId, messagingSenderId: FB.messagingSenderId, appId: FB.appId
+      }, 'siagabanjir-push');
       const q = new URLSearchParams({ apiKey: FB.apiKey || '', projectId: FB.projectId || '', messagingSenderId: FB.messagingSenderId, appId: FB.appId });
       const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js?' + q.toString());
       await navigator.serviceWorker.ready;
