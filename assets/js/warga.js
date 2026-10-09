@@ -120,7 +120,7 @@
       const ic = ui.$('#st-delta-ic');
       ic.className = 'badge ' + (dir === 'naik' ? 'b-wr' : dir === 'turun' ? 'b-ok' : 'b-mute');
       ic.innerHTML = I(dir === 'turun' ? 'trendDown' : 'trend', 16);
-      SB.chart(ui.$('#ch-mini'), D.getHistory(24), { compact: true, hover: false });
+      SB.chart(ui.$('#ch-mini'), D.getHistory(24), { hours: 24, compact: true, hover: false });
       if (arguments[1] && arguments[1].changed) this.paintImbauan();
     }
   };
@@ -153,7 +153,7 @@
       ui.$('#g-delta').className = 'chip-delta ' + (r > 0 ? 'c-wr-s' : 'c-ok-s');
       ui.$('#g-delta').hidden = !r;
       ui.$('#g-pill').innerHTML = ui.pill(st);
-      SB.chart(ui.$('#ch-main'), D.getHistory(this.hours), { ticks: 5, nowLabel: true });
+      SB.chart(ui.$('#ch-main'), D.getHistory(this.hours), { hours: this.hours, ticks: 5, nowLabel: true });
       ui.$('#g-stats').innerHTML = [['Tertinggi', s.max.v, 'c-dg'], ['Terendah', s.min.v, 'c-ok'], ['Rata-rata', s.avg, '']]
         .map(([l, v, c]) => `<article class="card stat-sm"><p class="stat-l">${l}</p><p class="stat-v sm ${c}">${F.level(v)}</p></article>`).join('');
       const step = (this.hours / 24) * 3600e3, rows = [];

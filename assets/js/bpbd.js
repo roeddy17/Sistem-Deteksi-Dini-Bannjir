@@ -105,7 +105,7 @@
       ui.$('#s-src').className = 'v ' + (sim ? 'c-wr' : on ? 'c-ok' : 'c-dg');
       ui.$('#s-src-s').textContent = sim ? 'data uji, bukan pembacaan sensor'
         : 'Firebase real-time' + (lat != null ? ` · jeda ${lat < 1000 ? lat + ' ms' : (lat / 1000).toFixed(1).replace('.', ',') + ' dtk'}` : '');
-      SB.chart(ui.$('#ch'), D.getHistory(this.hours), { ticks: 6, nowLabel: true, tipTime: true });
+      SB.chart(ui.$('#ch'), D.getHistory(this.hours), { hours: this.hours, ticks: 6, nowLabel: true, tipTime: true });
       if (extra && extra.changed) this.paintSide();
     }
   };
@@ -145,7 +145,7 @@
       ui.$('#g-min').textContent = F.level(s.min.v); ui.$('#g-min').className = 'v c-ok'; ui.$('#g-min-s').textContent = F.date(s.min.t) + ' · ' + F.time(s.min.t);
       ui.$('#g-avg').textContent = F.level(s.avg); ui.$('#g-avg-s').textContent = label + ' terakhir';
       ui.$('#g-ab').textContent = F.duration(s.aboveSiaga); ui.$('#g-ab').className = 'v c-wr'; ui.$('#g-ab-s').textContent = 'total ' + label.toLowerCase();
-      SB.chart(ui.$('#ch'), D.getHistory(h), { ticks: 7, nowLabel: false });
+      SB.chart(ui.$('#ch'), D.getHistory(h), { hours: h, ticks: 7, nowLabel: false });
       ui.$('#d-sub').textContent = 'Persentase waktu dalam ' + label.toLowerCase();
       const pct = k => Math.round(s.dist[k] * 100);
       ui.$('#dist').innerHTML = S.order.map(k => `<i class="bg-${S.cls(k)}" style="flex:${Math.max(s.dist[k], 0.01)}"></i>`).join('');

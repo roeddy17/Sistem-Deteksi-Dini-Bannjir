@@ -111,7 +111,7 @@
         </div>
       </section>`;
 
-    SB.chart(el.querySelector('#pr-chart'), D.getHistory(o.hours), { ticks: 7, hover: false, lastTip: false, nowLabel: false });
+    SB.chart(el.querySelector('#pr-chart'), D.getHistory(o.hours), { from, to: now, ticks: 7, hover: false, lastTip: false, nowLabel: false });
     const d = new Date(now);
     return `Laporan Ketinggian Air ${C.locationLabel} - ${o.label} - ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }

@@ -47,16 +47,26 @@
     return ev.reverse(); // terbaru di depan
   }
 
+  /* batas jeda "putus": ≥ 10 menit dan ≥ 4× selang pencatatan yang biasa (median) */
+  SB.gapLimit = function (pts) {
+    const d = [];
+    for (let i = 1; i < pts.length; i++) d.push(pts[i].t - pts[i - 1].t);
+    d.sort((a, b) => a - b);
+    return Math.max(10 * 60e3, 4 * (d[d.length >> 1] || 0));
+  };
+
   function makeStats(getHistory, getCurrent) {
     return function stats(hours, fromTime) {
       const pts = fromTime != null ? getHistory(null, fromTime) : getHistory(hours);
       const cur = getCurrent();
       if (!pts.length) pts.push(cur);                 // belum ada riwayat: pakai nilai terkini
       let max = pts[0], min = pts[0], sum = 0, above = 0;
+      const lim = SB.gapLimit(pts);
       const dist = { AMAN: 0, SIAGA: 0, BAHAYA: 0 };
       pts.forEach((p, i) => {
         if (p.v > max.v) max = p; if (p.v < min.v) min = p; sum += p.v;
-        const next = pts[i + 1]; const dt = next ? next.t - p.t : 0;
+        const next = pts[i + 1], gap = next ? next.t - p.t : 0;
+        const dt = gap > lim ? 0 : gap;   // jeda panjang = alat mati, tidak dihitung
         dist[S.of(p.v)] += dt; if (p.v > C.thresholds.siaga) above += dt;
       });
       const total = Object.values(dist).reduce((a, b) => a + b, 0) || 1;
