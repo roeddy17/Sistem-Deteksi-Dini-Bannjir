@@ -134,6 +134,14 @@ assets/
 
 ## Integrasi Firebase (real-time)
 
+**Status: aktif.** `config.js` memakai `dataSource: 'firebase'` dengan proyek `siagabanjir-f2c62` (Realtime Database, asia-southeast1). Untuk demo tanpa alat, tambahkan `?simulasi` pada alamat, mis. `warga.html?simulasi` atau `bpbd.html?simulasi#dashboard`.
+
+- **Data alat:** `/sensor/latest` dan `/sensor/history` ditulis oleh ESP8266 (lihat *Firmware alat*).
+- **Imbauan:** dikirim dari panel BPBD ke `/imbauan` sehingga sampai ke semua perangkat warga; draf tetap tersimpan di perangkat petugas. Imbauan bersasaran Siaga/Bahaya tetap menunggu status tercapai di sisi warga.
+- **Login BPBD:** memakai Firebase Authentication (email + kata sandi). Akun petugas dibuat di konsol Firebase: *Authentication → Sign-in method → Email/Password (aktifkan)*, lalu *Users → Add user*.
+- **Aturan database** (`firebase-rules.json`): `/sensor` hanya dapat dibaca web (alat menulis memakai rahasia database), `/imbauan` dapat dibaca semua dan ditulis hanya oleh petugas yang sudah masuk.
+
+
 Sumber data `firebase` sudah tersedia di `data.js`. Untuk mengaktifkannya, isi `firebase.databaseURL` (dan `apiKey` bila perlu) di `config.js`, lalu ubah `dataSource` menjadi `firebase`. SDK Firebase dimuat otomatis dari gstatic.
 
 **Cara kerja (tanpa polling):** browser berlangganan `/sensor/latest` dengan `on('value')`. Firebase menjaga satu koneksi WebSocket tetap terbuka dan **mendorong (push)** data baru begitu alat menulisnya, sehingga semua tampilan (warga dan BPBD) diperbarui seketika. Jeda di sisi tampilan, dari data diterima sampai angka di layar berubah, terukur **±3–5 ms** (uji dengan SDK tiruan). Panel BPBD menampilkan status koneksi dan **jeda server → browser** pada kartu *Sumber data*.

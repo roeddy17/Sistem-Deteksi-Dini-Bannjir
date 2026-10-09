@@ -23,7 +23,7 @@ SB.config = {
   thresholds: { siaga: 10, bahaya: 20 },
 
   /* Sumber data: 'simulasi' (data uji) atau 'firebase' (tahap integrasi) */
-  dataSource: 'simulasi',
+  dataSource: 'firebase',
 
   simulator: {
     intervalMs: 1000,   // jeda antar pembacaan simulasi (meniru sensor yang mengirim tiap 1 detik)
@@ -38,8 +38,9 @@ SB.config = {
 
   /* Diisi pada tahap integrasi Firebase Realtime Database */
   firebase: {
-    apiKey: '',
-    databaseURL: '',               // contoh: https://nama-proyek-default-rtdb.asia-southeast1.firebasedatabase.app
+    apiKey: 'AIzaSyC9S7lVXsXgH6wmkHPoOBWE9JWP-2jeuWI',   // bukan rahasia; keamanan diatur oleh aturan database
+    databaseURL: 'https://siagabanjir-f2c62-default-rtdb.asia-southeast1.firebasedatabase.app',
+    authDomain: 'siagabanjir-f2c62.firebaseapp.com',
     path: '/sensor',               // /sensor/latest {level, ts} dan /sensor/history/<id> {level, ts}
     sdk: 'https://www.gstatic.com/firebasejs/10.14.1/',
     waitMs: 8000                   // batas tunggu data pertama sebelum tampilan dibuka
@@ -95,3 +96,6 @@ SB.config = {
     zoneField: 'Kls_Bahaya'                    // kolom kelas zona pada data BPBD
   }
 };
+
+/* Demo tanpa alat: tambahkan ?simulasi pada alamat, mis. warga.html?simulasi atau bpbd.html?simulasi */
+if (/[?&]simulasi(=|&|$)/.test(location.search)) SB.config.dataSource = 'simulasi';

@@ -343,13 +343,18 @@
         const err = ui.$('#f-err');
         if (!judul.value.trim() || !isi.value.trim()) { err.textContent = 'Lengkapi judul dan isi pesan sebelum mengirim.'; err.hidden = false; (judul.value.trim() ? isi : judul).focus(); return; }
         err.hidden = true;
-        SB.imbauan.add({ judul: judul.value.trim(), isi: isi.value.trim(), target: this.target, push: ui.$('#f-push').checked, beranda: ui.$('#f-ber').checked, status });
-        const now = this.target === 'SEMUA' || S.rank(D.getStatus()) >= S.rank(this.target);
-        SB.notify.toast(status === 'TERKIRIM'
-          ? (now ? { title: 'Imbauan terkirim', body: 'Pesan tampil di web warga' + (ui.$('#f-push').checked ? ' dan dikirim sebagai notifikasi.' : '.'), cls: 'ok', icon: 'send' }
-            : { title: 'Imbauan dijadwalkan', body: `Status saat ini ${D.getStatus()}. Pesan akan tampil dan dikirim ke warga saat status mencapai ${this.target}.`, cls: 'pri', icon: 'send' })
-          : { title: 'Draf tersimpan', body: 'Draf dapat dikirim kemudian.', cls: 'pri', icon: 'save' });
-        judul.value = ''; isi.value = ''; preview(); this.paintHist();
+        const btns = ui.$$('#f button'); btns.forEach(b => b.disabled = true);
+        const now = this.target === 'SEMUA' || S.rank(D.getStatus()) >= S.rank(this.target), target = this.target, pushOn = ui.$('#f-push').checked;
+        SB.imbauan.add({ judul: judul.value.trim(), isi: isi.value.trim(), target, push: pushOn, beranda: ui.$('#f-ber').checked, status })
+          .then(() => {
+            SB.notify.toast(status === 'TERKIRIM'
+              ? (now ? { title: 'Imbauan terkirim', body: 'Pesan tampil di web warga' + (pushOn ? ' dan dikirim sebagai notifikasi.' : '.'), cls: 'ok', icon: 'send' }
+                : { title: 'Imbauan dijadwalkan', body: `Status saat ini ${D.getStatus()}. Pesan akan tampil dan dikirim ke warga saat status mencapai ${target}.`, cls: 'pri', icon: 'send' })
+              : { title: 'Draf tersimpan', body: 'Draf dapat dikirim kemudian.', cls: 'pri', icon: 'save' });
+            judul.value = ''; isi.value = ''; preview();
+          })
+          .catch(e => SB.notify.toast({ title: 'Imbauan belum terkirim', body: /permission|denied/i.test(e && e.message) ? 'Akses ditolak. Pastikan Anda masuk sebagai petugas BPBD.' : 'Periksa koneksi internet, lalu coba lagi.', cls: 'dg', icon: 'alert' }))
+          .finally(() => { btns.forEach(b => b.disabled = false); this.paintHist(); });
       };
       ui.$('#f').onsubmit = e => { e.preventDefault(); submit('TERKIRIM'); };
       ui.$('#f-draft').onclick = () => submit('DRAF');

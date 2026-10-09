@@ -15,7 +15,9 @@
   const RECV_KEY = 'sb-imb-terima';
   let recv = (() => { try { return JSON.parse(localStorage.getItem(RECV_KEY)); } catch (e) { return null; } })();
   const saveRecv = () => { try { localStorage.setItem(RECV_KEY, JSON.stringify(recv)); } catch (e) { /* abaikan */ } };
-  if (!recv) { recv = {}; SB.imbauan.sent().forEach(i => { recv[i.id] = i.t; }); saveRecv(); }   // kunjungan pertama: imbauan lama dianggap sudah diterima
+  const firstVisit = !recv;
+  if (!recv) recv = {};
+  let imbReady = false;                          // daftar imbauan sudah termuat (Firebase) dan penanda siap
   const applies = (i, st) => i.target === 'SEMUA' || S.rank(st) >= S.rank(i.target);
   function deliver(st, notify) {
     try { recv = Object.assign(JSON.parse(localStorage.getItem(RECV_KEY)) || {}, recv); } catch (e) { /* abaikan */ }   // tab lain mungkin sudah menerima
@@ -381,11 +383,17 @@
     }
   });
   SB.imbauan.subscribe(() => {
-    deliver(D.getStatus(), true);             // hanya imbauan yang sasarannya sudah tercapai
+    if (imbReady) deliver(D.getStatus(), true);   // hanya imbauan yang sasarannya sudah tercapai
     if (active === beranda) beranda.paintImbauan();
     if (active === riwayat) riwayat.paint();
   });
-  D.ready.then(() => { if (deliver(D.getStatus(), true) && active) paintNow({ changed: null }); });
+  Promise.all([D.ready, SB.imbauan.ready]).then(() => {
+    /* kunjungan pertama: imbauan lama dianggap sudah diterima (tidak dinotifikasikan ulang) */
+    if (firstVisit) { SB.imbauan.sent().forEach(i => { recv[i.id] = i.t; }); saveRecv(); }
+    imbReady = true;
+    deliver(D.getStatus(), true);
+    if (active) paintNow({ changed: null });
+  });
 
   /* Status koneksi */
   const banner = document.getElementById('offline-banner');

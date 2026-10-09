@@ -23,7 +23,7 @@
 
   function initFirebase() {
     if (fbAuth) return Promise.resolve(fbAuth);
-    return load(FB.sdk + 'firebase-app-compat.js').then(() => load(FB.sdk + 'firebase-auth-compat.js')).then(() => {
+    return SB.loadScript(FB.sdk + 'firebase-app-compat.js').then(() => SB.loadScript(FB.sdk + 'firebase-auth-compat.js')).then(() => {
       const app = firebase.apps.length ? firebase.app() : firebase.initializeApp({ apiKey: FB.apiKey || undefined, databaseURL: FB.databaseURL, authDomain: FB.authDomain || undefined });
       fbAuth = app.auth(); return fbAuth;
     });
@@ -39,7 +39,7 @@
     if (av) av.textContent = email.slice(0, 2).toUpperCase();
     if (ds) ds.textContent = 'BPBD Provinsi Papua';
     if (started) return; started = true;
-    load('assets/js/bpbd.js?v=14');
+    load('assets/js/bpbd.js?v=15');
   }
   function error(msg) { const e = ui.$('#lg-err'); e.textContent = msg; e.hidden = !msg; }
   function busy(on) { const b = ui.$('#lg-btn'); b.disabled = on; b.querySelector('span:last-child').textContent = on ? 'Memeriksa…' : 'Masuk'; }

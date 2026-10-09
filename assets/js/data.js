@@ -136,13 +136,6 @@
   };
 
   /* ---------- Sumber data: Firebase (tahap integrasi) ---------- */
-  function loadScript(src) {
-    return new Promise((res, rej) => {
-      const el = document.createElement('script');
-      el.src = src; el.onload = res; el.onerror = () => rej(new Error('Gagal memuat ' + src));
-      document.head.appendChild(el);
-    });
-  }
 
   /*
    * Alat (ESP8266) menulis:
@@ -197,10 +190,12 @@
       emit({ changed });
     }
 
-    loadScript(FB.sdk + 'firebase-app-compat.js')
-      .then(() => loadScript(FB.sdk + 'firebase-database-compat.js'))
-      .then(() => {
-        const app = firebase.apps.length ? firebase.app() : firebase.initializeApp({ apiKey: FB.apiKey || undefined, databaseURL: FB.databaseURL });
+    const appReady = SB.loadScript(FB.sdk + 'firebase-app-compat.js')
+      .then(() => SB.loadScript(FB.sdk + 'firebase-database-compat.js'))
+      .then(() => firebase.apps.length ? firebase.app()
+        : firebase.initializeApp({ apiKey: FB.apiKey || undefined, databaseURL: FB.databaseURL, authDomain: FB.authDomain || undefined }));
+    appReady
+      .then(app => {
         const db = app.database();
         db.ref('.info/serverTimeOffset').on('value', s => { offset = s.val() || 0; });
         db.ref('.info/connected').on('value', s => { connected = !!s.val(); emit({}); });
@@ -216,7 +211,7 @@
       .catch(err => { console.warn(err.message); resolveReady(); emit({ error: err.message }); });
 
     const api = {
-      kind: 'firebase', ready,
+      kind: 'firebase', ready, app: appReady,
       subscribe(fn) { subs.add(fn); fn(snapshot(), {}); return () => subs.delete(fn); },
       getCurrent: () => current,
       getStatus: () => status,
@@ -236,8 +231,51 @@
     SB.data = SB.createSimulator();
   }
 
-  /* ---------- Imbauan BPBD (tersimpan di perangkat, tersinkron antar-tab) ---------- */
-  SB.imbauan = (function () {
+  /* ---------- Imbauan BPBD ----------
+     Mode simulasi: tersimpan di perangkat (localStorage), tersinkron antar-tab.
+     Mode firebase: imbauan terkirim disimpan di /imbauan sehingga sampai ke semua perangkat warga;
+     penulisan hanya untuk petugas yang sudah masuk (aturan database). Draf tetap di perangkat petugas. */
+  SB.imbauan = SB.data.kind === 'firebase' && SB.data.app ? (function () {
+    const DKEY = 'sb-imbauan-draf';
+    const subs = new Set();
+    const notify = item => subs.forEach(fn => fn(item));
+    let list = [], loaded = false;
+    let drafts = (() => { try { const d = JSON.parse(localStorage.getItem(DKEY)); return Array.isArray(d) ? d : []; } catch (e) { return []; } })();
+    let readyRes;
+    const ready = new Promise(r => { readyRes = r; });
+    setTimeout(() => readyRes(), 8000);
+    const byTime = (a, b) => b.t - a.t;
+
+    SB.data.app.then(app => {
+      app.database().ref('imbauan').orderByChild('t').limitToLast(100).on('value', snap => {
+        const before = new Set(list.map(i => i.id)), next = [];
+        snap.forEach(c => { const v = c.val(); if (v && v.isi) next.push(Object.assign({}, v, { id: c.key, status: 'TERKIRIM', t: +v.t || Date.now() })); });
+        list = next;
+        if (!loaded) { loaded = true; readyRes(); notify(null); return; }
+        const fresh = next.filter(i => !before.has(i.id));
+        if (fresh.length) fresh.forEach(notify); else notify(null);
+      }, err => { console.warn('Imbauan Firebase:', err.message); readyRes(); });
+    }).catch(() => readyRes());
+
+    return {
+      ready,
+      all: () => list.concat(drafts).sort(byTime),
+      sent: () => list.slice().sort(byTime),
+      latest() { return this.sent()[0] || null; },
+      /* mengembalikan Promise: gagal bila petugas belum masuk atau koneksi terputus */
+      add(item) {
+        if (item.status !== 'TERKIRIM') {
+          const d = Object.assign({ id: 'd' + Date.now(), t: Date.now() }, item);
+          drafts.push(d); try { localStorage.setItem(DKEY, JSON.stringify(drafts)); } catch (e) { /* abaikan */ }
+          notify(d); return Promise.resolve(d);
+        }
+        const data = { judul: item.judul, isi: item.isi, target: item.target, push: item.push !== false, beranda: item.beranda !== false,
+          t: firebase.database.ServerValue.TIMESTAMP };
+        return SB.data.app.then(app => app.database().ref('imbauan').push(data)).then(ref => Object.assign({ id: ref.key, status: 'TERKIRIM', t: Date.now() }, item));
+      },
+      subscribe(fn) { subs.add(fn); return () => subs.delete(fn); }
+    };
+  })() : (function () {
     const KEY = 'sb-imbauan';
     const subs = new Set();
     const ch = 'BroadcastChannel' in window ? new BroadcastChannel('siagabanjir-imbauan') : null;
@@ -261,6 +299,7 @@
     if (ch) ch.onmessage = e => { if (e.data && e.data.type === 'imbauan') { list = load(); notify(e.data.item); } };
 
     return {
+      ready: Promise.resolve(),
       all: () => list.slice().sort((a, b) => b.t - a.t),
       sent: () => list.filter(i => i.status === 'TERKIRIM').sort((a, b) => b.t - a.t),
       latest() { return this.sent()[0] || null; },
@@ -269,7 +308,7 @@
         list.push(full); save(list);
         if (full.status === 'TERKIRIM' && ch) ch.postMessage({ type: 'imbauan', item: full });
         notify(full);
-        return full;
+        return Promise.resolve(full);
       },
       subscribe(fn) { subs.add(fn); return () => subs.delete(fn); }
     };
