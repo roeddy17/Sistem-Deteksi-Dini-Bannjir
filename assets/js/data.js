@@ -38,9 +38,10 @@
   function deriveEvents(history) {
     const ev = [];
     if (!history.length) return ev;
-    let prev = S.of(history[0].v);
+    const st = p => p.s || S.of(p.v);              // status dari alat bila ada
+    let prev = st(history[0]);
     for (const p of history) {
-      const s = S.of(p.v);
+      const s = st(p);
       if (s !== prev) { ev.push({ id: 'e' + p.t, t: p.t, type: 'status', from: prev, to: s, level: p.v }); prev = s; }
     }
     return ev.reverse(); // terbaru di depan
@@ -159,7 +160,7 @@
     let history = [], events = [], current = null, status = 'AMAN', connected = false, latency = null, offset = 0, lastLog = 0;
     try { const c = JSON.parse(localStorage.getItem('sb-last')); if (c && isFinite(c.v)) current = c; } catch (e) { /* abaikan */ }
     if (!current) current = { t: Date.now(), v: 0, placeholder: true };
-    status = S.of(current.v);
+    status = current.s || S.of(current.v);
 
     const snapshot = () => ({ current, status, connected, latency });
     const emit = extra => subs.forEach(fn => fn(snapshot(), extra));
@@ -172,6 +173,8 @@
       return out;
     }
     const valid = d => d && isFinite(+d.level);
+    /* status dari alat (memakai histeresis yang sama dengan LCD/buzzer/Telegram); bila tidak ada, dihitung dari level */
+    const devStatus = d => (S.order.includes(String(d.status).toUpperCase()) ? String(d.status).toUpperCase() : null);
 
     let resolveReady;
     const ready = new Promise(r => { resolveReady = r; });
@@ -182,9 +185,9 @@
       const t = isFinite(+d.ts) && +d.ts > 0 ? +d.ts : serverNow();
       latency = Math.max(0, serverNow() - t);
       if (!current.placeholder && t === current.t && +d.level === current.v) return;
-      current = { t, v: +d.level };
+      current = { t, v: +d.level, s: devStatus(d) || undefined };
       try { localStorage.setItem('sb-last', JSON.stringify(current)); } catch (e) { /* abaikan */ }
-      const prev = status; status = S.of(current.v);
+      const prev = status; status = current.s || S.of(current.v);
       let changed = null;
       if (prev !== status && lastLog) {   // lastLog > 0: riwayat sudah dimuat, perubahan ini nyata
         changed = { id: 'e' + t, t, type: 'status', from: prev, to: status, level: current.v };
@@ -203,7 +206,7 @@
         db.ref('.info/connected').on('value', s => { connected = !!s.val(); emit({}); });
         db.ref(base + '/history').orderByChild('ts').startAt(Date.now() - 31 * DAY).limitToLast(20000).once('value').then(snap => {
           const pts = [];
-          snap.forEach(c => { const d = c.val(); if (valid(d) && isFinite(+d.ts)) pts.push({ t: +d.ts, v: +d.level }); });
+          snap.forEach(c => { const d = c.val(); if (valid(d) && isFinite(+d.ts)) pts.push({ t: +d.ts, v: +d.level, s: devStatus(d) || undefined }); });
           pts.sort((a, b) => a.t - b.t);
           history = pts; events = deriveEvents(history); lastLog = Date.now();
           emit({});

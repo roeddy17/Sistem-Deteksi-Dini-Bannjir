@@ -159,6 +159,17 @@ Struktur data yang ditulis ESP8266:
 
 Pilih lokasi database **asia-southeast1 (Singapura)** saat membuat Realtime Database agar jarak ke Jayapura lebih dekat.
 
+## Firmware alat (ESP8266)
+
+`firmware/IoTBanjir_Firebase/IoTBanjir_Firebase.ino` adalah sketsa prototipe alat (HC-SR04, LCD I2C, buzzer, Blynk, Telegram) yang ditambah pengiriman ke Firebase:
+
+- `/sensor/latest` ditulis saat level atau status berubah, dan minimal tiap 5 detik; `/sensor/history` tiap 60 detik dan setiap status berubah. Keduanya berisi `level`, `status`, dan `ts` (waktu server Firebase).
+- Web memakai **status dari alat** bila tersedia, sehingga web, LCD, buzzer, dan Telegram selalu sama (termasuk histeresis 1 cm: naik ke Siaga > 11 cm, ke Bahaya > 21 cm; turun ke Siaga ≤ 19 cm, ke Aman ≤ 9 cm).
+- Perbaikan dari sketsa awal: (1) pesan Telegram perubahan status tidak lagi terkirim berulang tiap 0,8 detik; (2) celah status tertutup (21 cm saat Aman dan 10 cm saat Bahaya sebelumnya tidak berpindah status).
+- Token WiFi, Blynk, Telegram, dan rahasia database disimpan di `secrets.h` (salin dari `secrets.example.h`), yang tidak ikut di-commit.
+- Alat menulis memakai **rahasia database** (melewati aturan keamanan), sedangkan aturan di `firebase-rules.json` membuat `/sensor` hanya dapat dibaca oleh web.
+- Sketsa ini belum dikompilasi dan diuji pada perangkat; uji di Arduino IDE (board NodeMCU 1.0) dan pantau Serial Monitor. Bila memori tidak cukup karena Telegram dan Firebase memakai koneksi aman bersamaan, set `PAKAI_TELEGRAM 0`.
+
 ## Keterbatasan yang perlu dicatat
 
 - **Notifikasi:** versi ini menampilkan notifikasi di halaman, bunyi (meniru buzzer prototipe: bip berulang untuk Siaga, sirene untuk Bahaya), getar di HP Android, dan notifikasi browser saat tab tidak sedang dilihat. Notifikasi yang tetap muncul ketika browser ditutup memerlukan Firebase Cloud Messaging dan *service worker* (tahap integrasi). Di iPhone, notifikasi web hanya berjalan jika situs dipasang ke Home Screen.
