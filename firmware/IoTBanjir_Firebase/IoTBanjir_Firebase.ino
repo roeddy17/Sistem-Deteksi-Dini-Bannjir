@@ -116,7 +116,8 @@ void setup() {
 
 #if PAKAI_BLYNK
   Serial.println("[cek] menyambung ke Blynk...");
-  Blynk.begin(auth, ssid, pass);         // sama dengan sketsa asli (terbukti berjalan di alat ini)
+  Blynk.config(auth);                    // WiFi sudah tersambung di atas
+  Blynk.connect(5000);
   Serial.printf("[cek] Blynk %s, memori bebas: %u byte\n", Blynk.connected() ? "OK" : "belum tersambung", ESP.getFreeHeap());
 #endif
 
