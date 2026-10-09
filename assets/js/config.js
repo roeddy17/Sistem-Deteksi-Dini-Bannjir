@@ -45,9 +45,9 @@ SB.config = {
     /* Notifikasi push (FCM). Isi dari Firebase Console > Project settings:
        General > Your apps > Web app (messagingSenderId, appId) dan Cloud Messaging > Web Push certificates (vapidKey).
        Selama kosong, notifikasi hanya muncul saat halaman terbuka. */
-    messagingSenderId: '',
-    appId: '',
-    vapidKey: '',
+    messagingSenderId: '562804184118',
+    appId: '1:562804184118:web:d680c147d9c79db18d7497',
+    vapidKey: 'BDNDt1erP8C7MJglDUyeGfLw_HesnbDgg9kN2qYAKsPwy58WXg4de1Q10G9XwYEe8cSyxy1XWaPXyMZN5wSDLGU',
     path: '/sensor',               // /sensor/latest {level, ts} dan /sensor/history/<id> {level, ts}
     sdk: 'https://www.gstatic.com/firebasejs/10.14.1/',
     waitMs: 8000                   // batas tunggu data pertama sebelum tampilan dibuka
