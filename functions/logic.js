@@ -1,6 +1,6 @@
 /* Logika murni (tanpa Firebase) agar mudah diuji. */
 const ORDER = ['AMAN', 'SIAGA', 'BAHAYA'];
-const LOCATION = 'Kali Acai, Abepura';
+const LOCATION = 'Kali Acai';   // sesuai mockup A6 (notifikasi push)
 const T = { siaga: 10, bahaya: 20 };   // samakan dengan assets/js/config.js (thresholds)
 
 const rank = s => ORDER.indexOf(s);
@@ -20,9 +20,9 @@ const applies = (imb, status) => !imb.target || imb.target === 'SEMUA' || rank(s
 
 function statusMessage(before, after, level) {
   const up = rank(after) > rank(before);
-  const tail = after === 'BAHAYA' ? ' Segera menuju titik kumpul terdekat.' : after === 'SIAGA' ? ' Tetap waspada.' : '';
+  const tail = after === 'BAHAYA' ? ' Segera lakukan evakuasi ke titik kumpul terdekat.' : after === 'SIAGA' ? ' Tetap waspada.' : '';
   return {
-    title: up ? `Peringatan ${after}` : `Status turun ke ${after}`,
+    title: up ? (after === 'BAHAYA' ? 'Peringatan BAHAYA' : `Status ${after}`) : `Status turun ke ${after}`,   // mockup A6: "Peringatan BAHAYA", "Status SIAGA"
     body: `Ketinggian air ${LOCATION} mencapai ${Math.round(+level)} cm.${tail}`,
     kind: 'status', status: after
   };

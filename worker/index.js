@@ -70,17 +70,35 @@ export async function run(env, f = fetch) {
     } else console.warn('batchAdd gagal', r.status, JSON.stringify(j));
   }
 
+  const DIRECT_MAX = 35;   // batas subrequest paket gratis (50): di bawah ini kirim langsung ke tiap token
+  const dead = [];
   const send = async m => {
-    const r = await f(`https://fcm.googleapis.com/v1/projects/${env.FCM_PROJECT}/messages:send`, {
-      method: 'POST', headers: { Authorization: 'Bearer ' + await getTok(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: {
-        topic,
-        data: { title: m.title, body: m.body, kind: m.kind, status: m.status || '', link: env.SITE + (m.kind === 'imbauan' ? '#riwayat?f=imbauan' : '#beranda') },
-        webpush: { headers: { Urgency: 'high', TTL: '3600' } }
-      } })
-    });
-    if (!r.ok) throw new Error('FCM gagal: ' + r.status + ' ' + await r.text());
-    out.sent++;
+    const base = {
+      data: { title: m.title, body: m.body, kind: m.kind, status: m.status || '', link: env.SITE + (m.kind === 'imbauan' ? '#riwayat?f=imbauan' : '#beranda') },
+      webpush: { headers: { Urgency: 'high', TTL: '3600' } }
+    };
+    const post = async target => {
+      const r = await f(`https://fcm.googleapis.com/v1/projects/${env.FCM_PROJECT}/messages:send`, {
+        method: 'POST', headers: { Authorization: 'Bearer ' + await getTok(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: { ...target, ...base } })
+      });
+      return { ok: r.ok, status: r.status, text: r.ok ? '' : await r.text() };
+    };
+    const ids = Object.keys(tokens || {});
+    if (ids.length && ids.length <= DIRECT_MAX) {
+      const res = await Promise.all(ids.map(t => post({ token: t }).then(x => ({ t, ...x }))));
+      res.forEach(x => {
+        if (x.ok) out.sent++;
+        else {
+          console.warn('FCM gagal untuk ...' + x.t.slice(-8) + ': ' + x.status + ' ' + x.text.slice(0, 300));
+          if (x.status === 404 || /UNREGISTERED|INVALID_ARGUMENT/.test(x.text)) dead.push(x.t);
+        }
+      });
+    } else {
+      const x = await post({ topic });
+      if (!x.ok) throw new Error('FCM gagal: ' + x.status + ' ' + x.text);
+      out.sent++;
+    }
   };
 
   /* 2) perubahan status */
@@ -99,6 +117,7 @@ export async function run(env, f = fetch) {
     await db('imbauan/' + id, { method: 'PATCH', body: JSON.stringify({ pushedAt: Date.now() }) });
     await send(imbauanMessage(v));
   }
+  if (dead.length) { const p = {}; dead.forEach(t => { p[t] = null; }); await db('fcmTokens', { method: 'PATCH', body: JSON.stringify(p) }); out.removed = dead.length; }
   return out;
 }
 

@@ -22,11 +22,11 @@ const fcm = c => c.filter(x => x.url.includes('fcm.googleapis'));
 let t = mk({ 'sensor/latest': { level: 12, status: 'SIAGA' }, 'meta/pushStatus': { status: 'AMAN' }, fcmTokens: { a: { t: 1 }, bad: { t: 1 }, c: { t: 1, s: 1 } },
   imbauan: { i1: { isi: 'Waspada', target: 'SIAGA', push: true, t: Date.now() }, i2: { isi: 'x', target: 'BAHAYA', t: Date.now() }, i3: { isi: 'lama', pushedAt: 5 } } });
 let r = await run(env, t.f);
-assert.equal(r.subscribed, 1); assert.equal(r.status, 'SIAGA'); assert.equal(r.sent, 2);
+assert.equal(r.subscribed, 1); assert.equal(r.status, 'SIAGA'); assert.equal(r.sent, 6);   // 3 token x (status + imbauan)
 const patch = t.calls.find(c => c.m === 'PATCH' && c.url.includes('fcmTokens'));
 assert.deepEqual(JSON.parse(patch.body), { 'a/s': 1, bad: null });
 const msgs = fcm(t.calls).map(c => JSON.parse(c.body).message);
-assert.equal(msgs[0].data.title, 'Peringatan SIAGA'); assert.equal(msgs[1].data.kind, 'imbauan');
+assert.equal(msgs[0].data.title, 'Status SIAGA'); assert.ok(msgs[0].token); assert.equal(msgs[5].data.kind, 'imbauan');
 assert.ok(t.calls.find(c => c.url.includes('imbauan/i1')));
 assert.ok(!t.calls.find(c => c.url.includes('imbauan/i2')));
 // status sama -> tidak ada kiriman; pembacaan pertama -> hanya dicatat

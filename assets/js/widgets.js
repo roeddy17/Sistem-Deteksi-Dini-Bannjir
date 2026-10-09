@@ -89,9 +89,9 @@
 
     function alertStatus(ev) {
       const up = SB.status.rank(ev.to) > SB.status.rank(ev.from);
-      const title = up ? `Peringatan ${ev.to}` : `Status turun ke ${ev.to}`;
-      const tail = ev.to === 'BAHAYA' ? ' Segera menuju titik kumpul terdekat.' : ev.to === 'SIAGA' ? ' Tetap waspada.' : '';
-      const body = `Ketinggian air ${C.locationLabel} mencapai ${SB.fmt.level(ev.level)}.${tail}`;
+      const title = up ? (ev.to === 'BAHAYA' ? 'Peringatan BAHAYA' : `Status ${ev.to}`) : `Status turun ke ${ev.to}`;
+      const tail = ev.to === 'BAHAYA' ? ' Segera lakukan evakuasi ke titik kumpul terdekat.' : ev.to === 'SIAGA' ? ' Tetap waspada.' : '';
+      const body = `Ketinggian air ${String(C.locationLabel).split(',')[0]} mencapai ${SB.fmt.level(ev.level)}.${tail}`;
       toast({ title, body, cls: SB.status.cls(ev.to), icon: SB.status.icon(ev.to) });
       system(title, body);
       if (up && ev.to !== 'AMAN') { beep(ev.to); vibrate(ev.to); }
