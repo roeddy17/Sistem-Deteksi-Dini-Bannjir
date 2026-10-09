@@ -106,6 +106,7 @@ void setup() {
   telegramClient.setInsecure();
   while (WiFi.status() != WL_CONNECTED) { delay(300); Serial.print("."); }
   Serial.println("\nWiFi OK");
+  Serial.printf("[cek] memori bebas setelah WiFi: %u byte\n", ESP.getFreeHeap());
 
 #if PAKAI_FIREBASE
   fbClient.setInsecure();                // prototipe: sertifikat tidak diverifikasi
@@ -114,13 +115,16 @@ void setup() {
 #endif
 
 #if PAKAI_BLYNK
+  Serial.println("[cek] menyambung ke Blynk...");
   Blynk.config(auth);                    // WiFi sudah tersambung di atas
   Blynk.connect(5000);
+  Serial.printf("[cek] Blynk %s, memori bebas: %u byte\n", Blynk.connected() ? "OK" : "belum tersambung", ESP.getFreeHeap());
 #endif
 
   lcd.clear(); lcd.print("WiFi OK");
   delay(800); lcd.clear();
 
+  Serial.printf("[cek] Telegram %s, Firebase %s, Blynk %s\n", PAKAI_TELEGRAM ? "aktif" : "mati", PAKAI_FIREBASE ? "aktif" : "mati", PAKAI_BLYNK ? "aktif" : "mati");
   timer.setInterval(800L,  bacaLevelAir);   // sensor
   timer.setInterval(20L,   loopBuzzer);     // buzzer
 #if PAKAI_TELEGRAM
@@ -138,12 +142,15 @@ void loop() {
 
 // ================== FIREBASE (REST) [FIREBASE] ==================
 bool firebaseSend(const char* method, const char* path, const String& body) {
+  static bool pertama = true;
+  if (pertama) Serial.printf("[cek] kirim pertama ke Firebase, memori bebas: %u byte\n", ESP.getFreeHeap());
   String url = String(FIREBASE_URL) + path + ".json?auth=" + FIREBASE_SECRET;
-  if (!fbHttp.begin(fbClient, url)) return false;
+  if (!fbHttp.begin(fbClient, url)) { Serial.println("Firebase: alamat tidak valid (cek FIREBASE_URL)"); return false; }
   fbHttp.addHeader("Content-Type", "application/json");
   int code = fbHttp.sendRequest(method, body);
   fbHttp.end();                          // dengan setReuse(true) koneksi TLS tetap dipakai ulang
-  if (code != 200) Serial.printf("Firebase %s %s gagal: %d\n", method, path, code);
+  if (code != 200) Serial.printf("Firebase %s %s gagal: %d (%s)\n", method, path, code, fbHttp.errorToString(code).c_str());
+  else if (pertama) { Serial.printf("[cek] Firebase OK, memori bebas: %u byte\n", ESP.getFreeHeap()); pertama = false; }
   return code == 200;
 }
 
