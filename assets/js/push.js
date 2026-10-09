@@ -33,7 +33,8 @@
       if (!token) throw new Error('Token FCM kosong.');
       let saved = null; try { saved = localStorage.getItem(KEY); } catch (e) { /* abaikan */ }
       if (saved !== token) {
-        try { await app.database().ref('fcmTokens/' + token).set({ t: firebase.database.ServerValue.TIMESTAMP }); } catch (e) { /* token sudah terdaftar */ }
+        /* simpan hanya bila berhasil, supaya dicoba lagi saat halaman dibuka berikutnya */
+        await app.database().ref('fcmTokens/' + token).set({ t: firebase.database.ServerValue.TIMESTAMP });
         try { localStorage.setItem(KEY, token); } catch (e) { /* abaikan */ }
       }
       return 'granted';
@@ -49,6 +50,6 @@
   /* izin sudah diberikan sebelumnya: segarkan token diam-diam (token dapat berganti) */
   if (C.dataSource === 'firebase' && 'Notification' in window && Notification.permission === 'granted') {
     const wait = () => (SB.data && SB.data.app ? SB.data.app : Promise.reject());
-    Promise.resolve().then(wait).then(() => available() && enable()).catch(err => err && console.warn('Push:', err.message));
+    Promise.resolve().then(wait).then(() => available() && enable()).catch(err => err && console.warn('Push:', err.message || err));
   }
 })();
