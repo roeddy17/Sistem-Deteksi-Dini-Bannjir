@@ -74,7 +74,11 @@
     const permission = () => ('Notification' in window ? Notification.permission : 'unsupported');
     async function request() {
       if (!('Notification' in window)) return 'unsupported';
-      try { return await Notification.requestPermission(); } catch (e) { return Notification.permission; }
+      let r;
+      try { r = await Notification.requestPermission(); } catch (e) { r = Notification.permission; }
+      /* izin diberikan: daftarkan perangkat untuk push (tetap menerima peringatan saat browser ditutup) */
+      if (r === 'granted' && SB.push && SB.push.available()) SB.push.enable().catch(err => console.warn('Push:', err.message));
+      return r;
     }
     /* Notifikasi sistem hanya saat halaman tidak sedang dilihat. Versi Firebase Cloud Messaging
        (tetap muncul saat browser ditutup) dikerjakan pada tahap integrasi. */

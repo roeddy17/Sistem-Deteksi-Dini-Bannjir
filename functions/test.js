@@ -1,0 +1,22 @@
+const assert = require('assert');
+const L = require('./logic');
+assert.strictEqual(L.statusOf({ level: 10 }), 'AMAN');
+assert.strictEqual(L.statusOf({ level: 11 }), 'SIAGA');
+assert.strictEqual(L.statusOf({ level: 19.4 }), 'SIAGA');
+assert.strictEqual(L.statusOf({ level: 20 }), 'BAHAYA');
+assert.strictEqual(L.statusOf({ level: 3, status: 'bahaya' }), 'BAHAYA');   // status alat diutamakan
+assert.strictEqual(L.statusOf({ level: 'x' }), null);
+assert.strictEqual(L.statusOf(null), null);
+assert.ok(L.applies({ target: 'SEMUA' }, 'AMAN'));
+assert.ok(L.applies({}, 'AMAN'));
+assert.ok(!L.applies({ target: 'SIAGA' }, 'AMAN'));
+assert.ok(L.applies({ target: 'SIAGA' }, 'BAHAYA'));
+assert.ok(!L.applies({ target: 'BAHAYA' }, 'SIAGA'));
+let m = L.statusMessage('AMAN', 'SIAGA', 12);
+assert.strictEqual(m.title, 'Peringatan SIAGA'); assert.ok(m.body.includes('12 cm') && m.body.includes('Tetap waspada'));
+m = L.statusMessage('SIAGA', 'BAHAYA', 21);
+assert.ok(m.body.includes('titik kumpul'));
+m = L.statusMessage('BAHAYA', 'SIAGA', 15);
+assert.strictEqual(m.title, 'Status turun ke SIAGA');
+assert.strictEqual(L.imbauanMessage({ isi: 'x'.repeat(500) }).body.length, 240);
+console.log('semua uji lulus');

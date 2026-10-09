@@ -323,6 +323,10 @@
         <a class="li menu-row" ${attrs}><span class="badge b-${cls} lg">${I(ic, 18)}</span>
           <div class="grow"><strong>${title}</strong><p class="sm ${warn ? 'c-wr' : 'muted'}">${sub}</p></div>${I('chev', 18)}</a>`;
       const perm = SB.notify.permission();
+      const pushOn = () => SB.push && SB.push.available();
+      const notifText = p => p === 'granted'
+        ? (pushOn() ? 'Aktif · peringatan Siaga dan Bahaya tetap diterima saat browser ditutup' : 'Aktif · bunyi &amp; getar untuk Siaga dan Bahaya (saat halaman terbuka)')
+        : (SB.push && SB.push.needsInstall() ? 'Di iPhone: ketuk Bagikan › Tambah ke Layar Utama, lalu buka dari ikon SiagaBanjir' : 'Belum aktif · ketuk untuk mengaktifkan');
       view.innerHTML = `<header class="top"><div><h1 class="h1">Menu</h1><p class="sub">Fitur pendukung keselamatan &amp; pengaturan</p></div></header>
         <section class="loc-card"><span class="badge b-glass lg">${I('pin', 20)}</span><div class="grow"><p class="sm">Lokasi dipantau</p><strong>${esc(C.locationLabel)}</strong></div></section>
         <p class="group-l">Keselamatan</p>
@@ -339,12 +343,12 @@
         <article class="card list pad-y0">${row('mega', 'pri', 'Imbauan dari BPBD', 'Pesan terbaru dari BPBD', 'href="#riwayat?f=imbauan"')}</article>
         <p class="group-l">Pengaturan</p>
         <article class="card list pad-y0">
-          <button type="button" class="li menu-row" id="m-notif"><span class="badge b-vio lg">${I('bell', 18)}</span><div class="grow"><strong>Notifikasi peringatan</strong><p class="sm muted" id="m-notif-s">${perm === 'granted' ? 'Aktif · bunyi &amp; getar untuk Siaga dan Bahaya' : 'Belum aktif · ketuk untuk mengaktifkan'}</p></div>${I('chev', 18)}</button>
+          <button type="button" class="li menu-row" id="m-notif"><span class="badge b-vio lg">${I('bell', 18)}</span><div class="grow"><strong>Notifikasi peringatan</strong><p class="sm muted" id="m-notif-s">${notifText(perm)}</p></div>${I('chev', 18)}</button>
           <div class="li menu-row"><span class="badge b-mute lg">${I('db', 18)}</span><div class="grow"><strong>Data offline</strong><p class="sm muted">Data terakhir tersimpan di perangkat dan tetap tampil saat koneksi terputus</p></div></div>
         </article>`;
       ui.$('#m-notif').onclick = async () => {
         const r = await SB.notify.request();
-        ui.$('#m-notif-s').innerHTML = r === 'granted' ? 'Aktif · bunyi &amp; getar untuk Siaga dan Bahaya' : 'Belum aktif · izinkan notifikasi di pengaturan browser';
+        ui.$('#m-notif-s').innerHTML = r === 'granted' ? notifText('granted') : (r === 'unsupported' && SB.push && SB.push.needsInstall() ? notifText('default') : 'Belum aktif · izinkan notifikasi di pengaturan browser');
       };
     },
     update() {}

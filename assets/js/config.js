@@ -41,6 +41,13 @@ SB.config = {
     apiKey: 'AIzaSyC9S7lVXsXgH6wmkHPoOBWE9JWP-2jeuWI',   // bukan rahasia; keamanan diatur oleh aturan database
     databaseURL: 'https://siagabanjir-f2c62-default-rtdb.asia-southeast1.firebasedatabase.app',
     authDomain: 'siagabanjir-f2c62.firebaseapp.com',
+    projectId: 'siagabanjir-f2c62',
+    /* Notifikasi push (FCM). Isi dari Firebase Console > Project settings:
+       General > Your apps > Web app (messagingSenderId, appId) dan Cloud Messaging > Web Push certificates (vapidKey).
+       Selama kosong, notifikasi hanya muncul saat halaman terbuka. */
+    messagingSenderId: '',
+    appId: '',
+    vapidKey: '',
     path: '/sensor',               // /sensor/latest {level, ts} dan /sensor/history/<id> {level, ts}
     sdk: 'https://www.gstatic.com/firebasejs/10.14.1/',
     waitMs: 8000                   // batas tunggu data pertama sebelum tampilan dibuka

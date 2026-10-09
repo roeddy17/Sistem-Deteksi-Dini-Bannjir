@@ -1,0 +1,15 @@
+{
+  "name": "SiagaBanjir",
+  "short_name": "SiagaBanjir",
+  "description": "Pantau ketinggian air Kali Acai, Abepura, dan terima peringatan dini banjir.",
+  "lang": "id",
+  "start_url": "./warga.html#beranda",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F4F6F9",
+  "theme_color": "#0E5AA7",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

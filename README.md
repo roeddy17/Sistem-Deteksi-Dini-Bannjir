@@ -184,3 +184,20 @@ Pilih lokasi database **asia-southeast1 (Singapura)** saat membuat Realtime Data
 - **Imbauan** dengan sasaran status (Siaga/Bahaya) baru tampil dan dinotifikasikan ke warga saat status mencapai sasaran tersebut (sekali per imbauan); sasaran "Semua status" langsung tampil. Imbauan tersimpan di perangkat (localStorage) dan tersinkron antar-tab pada browser yang sama. Pengiriman ke perangkat lain memerlukan Firebase.
 - **Peta**: titik sensor masih perkiraan. Layer InaRISK dan batas administrasi bergantung pada ketersediaan server BNPB; bila server tidak dapat diakses, peta menampilkan keterangan "gagal dimuat". Pembacaan nilai indeks (ketuk peta / cek lokasi) memakai operasi *identify*; sudah diuji berhasil dari browser (server BNPB mengizinkan permintaan lintas situs). Contoh uji: pada titik sensor (−2,6025; 140,6690) nilai indeks = 0,833333 (kelas Tinggi). Peta dasar memerlukan internet; atribusi Esri dan OpenStreetMap tampil di pojok peta sesuai ketentuan pemakaiannya.
 - **Font Inter** dimuat dari Google Fonts; tanpa internet, browser memakai font sistem.
+
+## Notifikasi push (peringatan saat browser ditutup)
+
+Warga yang mengaktifkan notifikasi di menu **Menu → Notifikasi** akan menerima peringatan SIAGA/BAHAYA dan imbauan BPBD lewat Firebase Cloud Messaging, walau tab/browser ditutup. Pengirimnya Cloud Functions (`functions/`).
+
+Pengaturan sekali saja:
+1. Firebase Console → upgrade ke paket **Blaze** (kuota gratis cukup untuk skala prototipe).
+2. Project settings → General → Your apps → Web app: salin `messagingSenderId` dan `appId` ke `assets/js/config.js`.
+3. Project settings → Cloud Messaging → pastikan **Firebase Cloud Messaging API (V1)** aktif, lalu buat **Web Push certificate** dan salin key pair ke `vapidKey` di `config.js`.
+4. Deploy:
+   ```
+   npm i -g firebase-tools
+   firebase login
+   cd functions && npm install && cd ..
+   firebase deploy --only functions,database
+   ```
+5. iPhone: notifikasi hanya jalan setelah situs ditambahkan ke Layar Utama (Add to Home Screen).
