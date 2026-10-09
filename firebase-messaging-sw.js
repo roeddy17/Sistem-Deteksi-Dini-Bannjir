@@ -15,7 +15,7 @@ messaging.onBackgroundMessage(payload => {
   return self.registration.showNotification(d.title || 'SiagaBanjir', {
     body: d.body || '',
     icon, badge: icon,
-    tag: 'siagabanjir', renotify: true,           // tag sama dengan notifikasi lokal agar tidak ganda
+    tag: 'siagabanjir-' + (d.kind === 'imbauan' ? 'imbauan' : d.status || 'status'), renotify: true,   // per status: Siaga dan Bahaya bertumpuk seperti mockup A6; tag sama dengan notifikasi lokal agar tidak ganda
     requireInteraction: bahaya,
     vibrate: bahaya ? [600, 200, 600, 200, 600] : [300, 150, 300],
     data: { link: d.link || '' }

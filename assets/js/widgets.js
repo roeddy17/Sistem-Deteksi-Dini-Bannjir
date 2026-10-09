@@ -82,9 +82,9 @@
     }
     /* Notifikasi sistem hanya saat halaman tidak sedang dilihat. Versi Firebase Cloud Messaging
        (tetap muncul saat browser ditutup) dikerjakan pada tahap integrasi. */
-    function system(title, body) {
+    function system(title, body, tag) {
       if (permission() !== 'granted' || document.visibilityState === 'visible') return;
-      try { new Notification(title, { body, tag: 'siagabanjir', renotify: true }); } catch (e) { /* perlu service worker di sebagian HP */ }
+      try { new Notification(title, { body, tag: tag || 'siagabanjir', renotify: true }); } catch (e) { /* perlu service worker di sebagian HP */ }
     }
 
     function alertStatus(ev) {
@@ -93,12 +93,12 @@
       const tail = ev.to === 'BAHAYA' ? ' Segera lakukan evakuasi ke titik kumpul terdekat.' : ev.to === 'SIAGA' ? ' Tetap waspada.' : '';
       const body = `Ketinggian air ${String(C.locationLabel).split(',')[0]} mencapai ${SB.fmt.level(ev.level)}.${tail}`;
       toast({ title, body, cls: SB.status.cls(ev.to), icon: SB.status.icon(ev.to) });
-      system(title, body);
+      system(title, body, 'siagabanjir-' + ev.to);
       if (up && ev.to !== 'AMAN') { beep(ev.to); vibrate(ev.to); }
     }
     function alertImbauan(item) {
       toast({ title: 'Imbauan BPBD', body: item.isi, cls: 'pri', icon: 'mega', duration: 9000 });
-      system('Imbauan BPBD', item.isi);
+      system('Imbauan BPBD', item.isi, 'siagabanjir-imbauan');
     }
     return { toast, request, permission, alertStatus, alertImbauan, soundOn };
   })();
