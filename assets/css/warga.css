@@ -57,9 +57,21 @@ body.warga.lock .sim-fab { bottom: calc(var(--nav-h) + 24px); }
 .li-v { font-size: 14px; }
 
 /* peta */
-.map-m { min-height: clamp(280px, 48vh, 560px); }
+.map-m { height: clamp(260px, 46vh, 480px); }
 .sheet { border-radius: 22px; gap: 12px; }
 
+
+/* legenda tempat penting */
+.poi-legend { gap: 6px 10px; }
+.lg-poi { display: inline-flex; align-items: center; gap: 5px; color: var(--tx2); }
+.lg-poi i { width: 16px; height: 16px; border-radius: 50%; background: var(--c); color: #fff; display: grid; place-items: center; }
+
+/* hasil cek lokasi */
+.loc-res { gap: 12px; }
+.loc-act { display: flex; flex-wrap: wrap; gap: 8px; }
+.loc-act .btn { flex: 1 1 150px; }
+#lr-test[aria-pressed="true"] { border-color: var(--pri); background: var(--pri-s); color: var(--pri); }
+.sheet > .btn { width: 100%; }
 
 /* menu */
 .loc-card { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 20px; color: #fff; background: linear-gradient(90deg, var(--pri), #1D7BD6); }
@@ -88,5 +100,5 @@ body.warga.lock .sim-fab { bottom: calc(var(--nav-h) + 24px); }
 }
 /* HP mendatar (tinggi layar kecil) */
 @media (max-height: 480px) and (orientation: landscape) {
-  .map-m { min-height: 240px; }
+  .map-m { height: 240px; }
 }

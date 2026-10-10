@@ -1,0 +1,9 @@
+# token & kata sandi alat — jangan di-commit
+firmware/**/secrets.h
+
+# dependensi Cloud Functions
+functions/node_modules/
+
+worker/.wrangler/
+worker/node_modules/
+*.patch

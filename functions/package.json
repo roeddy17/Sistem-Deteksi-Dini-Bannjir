@@ -1,0 +1,12 @@
+{
+  "name": "siagabanjir-functions",
+  "private": true,
+  "description": "Cloud Functions SiagaBanjir: push notifikasi (FCM) saat status berubah dan saat imbauan dikirim",
+  "main": "index.js",
+  "engines": { "node": "20" },
+  "scripts": { "test": "node test.js" },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.0"
+  }
+}

@@ -1,0 +1,18 @@
+# Pengirim push SiagaBanjir di Cloudflare Workers (paket gratis, tanpa kartu).
+# Berjalan otomatis tiap menit: cek status alat + imbauan baru, lalu kirim push FCM ke warga.
+name = "siagabanjir-push"
+main = "index.js"
+compatibility_date = "2024-11-01"
+
+[triggers]
+crons = ["* * * * *"]
+
+[vars]
+DB_URL = "https://siagabanjir-f2c62-default-rtdb.asia-southeast1.firebasedatabase.app"
+FCM_PROJECT = "siagabanjir-f2c62"
+SITE = "https://roeddy17.github.io/Sistem-Deteksi-Dini-Bannjir/warga.html"
+TOPIC = "warga"
+
+# Rahasia (jangan ditulis di sini) diisi dengan: npx wrangler secret put <NAMA>
+#   FIREBASE_SECRET     = database secret (yang sama dengan di alat)
+#   FCM_SERVICE_ACCOUNT = isi file JSON service account Firebase

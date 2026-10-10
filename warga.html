@@ -4,12 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0E5AA7">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SiagaBanjir">
   <title>SiagaBanjir · Pantau Kali Acai</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="assets/css/base.css">
-  <link rel="stylesheet" href="assets/css/warga.css">
+  <link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css?v=21">
+  <link rel="stylesheet" href="assets/css/base.css?v=21">
+  <link rel="stylesheet" href="assets/css/warga.css?v=21">
 </head>
 <body class="warga">
   <div class="app">
@@ -29,11 +35,14 @@
   </div>
   <div id="toasts" aria-live="polite"></div>
 
-  <script src="assets/js/config.js"></script>
-  <script src="assets/js/core.js"></script>
-  <script src="assets/js/data.js"></script>
-  <script src="assets/js/chart.js"></script>
-  <script src="assets/js/widgets.js"></script>
-  <script src="assets/js/warga.js"></script>
+  <script src="assets/js/config.js?v=21"></script>
+  <script src="assets/js/core.js?v=21"></script>
+  <script src="assets/js/data.js?v=21"></script>
+  <script src="assets/js/chart.js?v=21"></script>
+  <script src="assets/js/widgets.js?v=21"></script>
+  <script src="assets/js/push.js?v=21"></script>
+  <script src="assets/vendor/leaflet/leaflet.js?v=21"></script>
+  <script src="assets/js/peta.js?v=21"></script>
+  <script src="assets/js/warga.js?v=21"></script>
 </body>
 </html>

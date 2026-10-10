@@ -8,10 +8,27 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="assets/css/base.css">
-  <link rel="stylesheet" href="assets/css/bpbd.css">
+  <link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css?v=21">
+  <link rel="stylesheet" href="assets/css/base.css?v=21">
+  <link rel="stylesheet" href="assets/css/bpbd.css?v=21">
+  <link rel="stylesheet" href="assets/css/cetak.css?v=21">
 </head>
-<body class="bpbd">
+<body class="bpbd locked">
+  <section id="login" class="login" aria-labelledby="lg-h" hidden>
+    <div class="lg-card">
+      <div class="lg-brand"><span class="brand-mark" data-icon="waves" data-size="26"></span><div><b>SiagaBanjir</b><span>Panel BPBD</span></div></div>
+      <h1 id="lg-h">Masuk petugas</h1>
+      <p class="lg-sub">Khusus petugas BPBD. Kirim imbauan dan unduh laporan memerlukan akun.</p>
+      <form id="lg-form" novalidate>
+        <label class="fl"><span>Email</span><input id="lg-em" type="email" autocomplete="username" inputmode="email" placeholder="nama@bpbd.go.id"></label>
+        <label class="fl"><span>Kata sandi</span><span class="lg-pw"><input id="lg-pw" type="password" autocomplete="current-password" placeholder="Masukkan kata sandi"><button type="button" id="lg-eye" class="lg-eye" aria-label="Tampilkan kata sandi" data-icon="eye" data-size="18"></button></span></label>
+        <p class="lg-err" id="lg-err" role="alert" hidden></p>
+        <button type="submit" class="btn btn-pri lg-btn" id="lg-btn"><span data-icon="lock" data-size="16"></span><span>Masuk</span></button>
+      </form>
+      <div class="lg-demo" id="lg-demo" hidden><b>Mode simulasi</b><p>Data uji untuk mencoba antarmuka, tidak terhubung ke alat maupun Firebase.</p><button type="button" class="btn sm" id="lg-fill">Masuk mode simulasi</button></div>
+      <p class="lg-warga">Anda warga? <a href="warga.html">Buka halaman warga</a> (tanpa masuk)</p>
+    </div>
+  </section>
   <div class="layout">
     <aside class="side" aria-label="Menu utama">
       <div class="brand"><span class="brand-mark" data-icon="waves" data-size="22"></span><div><b>SiagaBanjir</b><span>Panel BPBD</span></div></div>
@@ -26,18 +43,21 @@
       </nav>
       <div class="side-foot">
         <div class="src sim" id="src-box"><b><span data-icon="sliders" data-size="14"></span>Mode simulasi</b>Data uji untuk pengujian antarmuka</div>
-        <div class="user"><span class="avatar">PP</span><div><b>Petugas Pusdalops</b><span>BPBD Provinsi Papua</span></div></div>
+        <div class="user"><span class="avatar" id="user-av">PP</span><div><b id="user-name">Petugas Pusdalops</b><span id="user-desc">BPBD Provinsi Papua</span></div><button type="button" class="btn-out" id="btn-out" title="Keluar" aria-label="Keluar" data-icon="logout" data-size="18"></button></div>
       </div>
     </aside>
     <main id="view" tabindex="-1"></main>
   </div>
   <div id="toasts" aria-live="polite"></div>
 
-  <script src="assets/js/config.js"></script>
-  <script src="assets/js/core.js"></script>
-  <script src="assets/js/data.js"></script>
-  <script src="assets/js/chart.js"></script>
-  <script src="assets/js/widgets.js"></script>
-  <script src="assets/js/bpbd.js"></script>
+  <script src="assets/js/config.js?v=21"></script>
+  <script src="assets/js/core.js?v=21"></script>
+  <script src="assets/js/data.js?v=21"></script>
+  <script src="assets/js/chart.js?v=21"></script>
+  <script src="assets/js/widgets.js?v=21"></script>
+  <script src="assets/vendor/leaflet/leaflet.js?v=21"></script>
+  <script src="assets/js/peta.js?v=21"></script>
+  <script src="assets/js/laporan-cetak.js?v=21"></script>
+  <script src="assets/js/auth.js?v=21"></script>
 </body>
 </html>

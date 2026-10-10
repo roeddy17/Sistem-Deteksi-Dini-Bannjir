@@ -31,7 +31,7 @@
         title: e.to === 'AMAN' ? 'Status kembali AMAN' : (up ? 'Status naik ke ' : 'Status turun ke ') + e.to,
         desc: `Ketinggian air ${F.level(e.level)}${e.to === 'BAHAYA' ? ' · bunyi dan getar dikirim ke warga' : ''}` };
     });
-    const im = SB.imbauan.sent().map(i => ({ t: i.t, kind: 'IMBAUAN', cls: 'pri', icon: 'mega', pill: ui.tag('IMBAUAN', 'pri'), title: 'Imbauan terkirim', desc: `“${i.judul}” · ke semua pengguna` }));
+    const im = SB.imbauan.sent().map(i => ({ t: i.t, kind: 'IMBAUAN', cls: 'pri', icon: 'mega', pill: ui.tag('IMBAUAN', 'pri'), title: 'Imbauan terkirim', desc: `“${i.judul}” · ${i.target === 'SEMUA' ? 'tampil pada semua status' : 'tampil saat status ' + i.target}` }));
     return ev.concat(im).sort((a, b) => b.t - a.t);
   }
   /* kunjungan pertama: notifikasi lebih lama dari 6 jam dianggap sudah dibaca */
@@ -79,8 +79,9 @@
     },
     paintSide() {
       const it = SB.imbauan.latest(), box = ui.$('#imb');
-      box.innerHTML = `<div class="row-c"><span class="badge b-solid">${I('mega', 17)}</span><h2 class="h2 grow c-pri-d">Imbauan aktif</h2>${it ? ui.tag('TERKIRIM', 'ok') : ''}</div>
-        ${it ? `<p>${esc(it.isi)}</p><p class="muted sm">Dikirim ${F.time(it.t)} · ke semua pengguna</p>` : '<p class="sub">Belum ada imbauan yang dikirim.</p>'}
+      const live = it && (it.target === 'SEMUA' || S.rank(D.getStatus()) >= S.rank(it.target));
+      box.innerHTML = `<div class="row-c"><span class="badge b-solid">${I('mega', 17)}</span><h2 class="h2 grow c-pri-d">Imbauan terakhir</h2>${it ? (live ? ui.tag('TAMPIL DI WARGA', 'ok') : ui.tag('MENUNGGU ' + it.target, 'wr')) : ''}</div>
+        ${it ? `<p>${esc(it.isi)}</p><p class="muted sm">Dikirim ${F.time(it.t)} · ${it.target === 'SEMUA' ? 'tampil pada semua status' : 'tampil saat status ' + it.target}</p>` : '<p class="sub">Belum ada imbauan yang dikirim.</p>'}
         <a class="btn btn-pri" href="#imbauan">${I('plus', 16)}Kirim imbauan baru</a>`;
       ui.$('#mini-feed').innerHTML = feed().slice(0, 3).map(i => `
         <div class="li ai-c"><span class="badge b-${i.cls}">${I(i.icon, 16)}</span><div class="grow"><strong class="sm">${i.title}</strong><p class="sm sub">${esc(i.desc)}</p></div><span class="muted sm">${F.dayLabel(i.t) === 'Hari ini' ? F.time(i.t) : F.dayLabel(i.t).toLowerCase()}</span></div>`).join('');
@@ -99,10 +100,12 @@
       ui.$('#s-ch-s').textContent = 'dari ' + F.level(s24.ref1h);
       ui.$('#s-max').textContent = F.level(sd.max.v); ui.$('#s-max-s').textContent = 'pukul ' + F.time(sd.max.t);
       ui.$('#s-min').textContent = F.level(sd.min.v); ui.$('#s-min-s').textContent = 'pukul ' + F.time(sd.min.t);
-      ui.$('#s-src').textContent = sim ? 'Simulasi' : 'Terhubung';
-      ui.$('#s-src').className = 'v ' + (sim ? 'c-wr' : 'c-ok');
-      ui.$('#s-src-s').textContent = sim ? 'data uji, bukan pembacaan sensor' : 'via Firebase Realtime Database';
-      SB.chart(ui.$('#ch'), D.getHistory(this.hours), { ticks: 6, nowLabel: true, tipTime: true });
+      const on = D.isConnected(), lat = D.getLatency();
+      ui.$('#s-src').textContent = sim ? 'Simulasi' : on ? 'Terhubung' : 'Terputus';
+      ui.$('#s-src').className = 'v ' + (sim ? 'c-wr' : on ? 'c-ok' : 'c-dg');
+      ui.$('#s-src-s').textContent = sim ? 'data uji, bukan pembacaan sensor'
+        : 'Firebase real-time' + (lat != null ? ` · jeda ${lat < 1000 ? lat + ' ms' : (lat / 1000).toFixed(1).replace('.', ',') + ' dtk'}` : '');
+      SB.chart(ui.$('#ch'), D.getHistory(this.hours), { hours: this.hours, ticks: 6, nowLabel: true, tipTime: true });
       if (extra && extra.changed) this.paintSide();
     }
   };
@@ -142,7 +145,7 @@
       ui.$('#g-min').textContent = F.level(s.min.v); ui.$('#g-min').className = 'v c-ok'; ui.$('#g-min-s').textContent = F.date(s.min.t) + ' · ' + F.time(s.min.t);
       ui.$('#g-avg').textContent = F.level(s.avg); ui.$('#g-avg-s').textContent = label + ' terakhir';
       ui.$('#g-ab').textContent = F.duration(s.aboveSiaga); ui.$('#g-ab').className = 'v c-wr'; ui.$('#g-ab-s').textContent = 'total ' + label.toLowerCase();
-      SB.chart(ui.$('#ch'), D.getHistory(h), { ticks: 7, nowLabel: false });
+      SB.chart(ui.$('#ch'), D.getHistory(h), { hours: h, ticks: 7, nowLabel: false });
       ui.$('#d-sub').textContent = 'Persentase waktu dalam ' + label.toLowerCase();
       const pct = k => Math.round(s.dist[k] * 100);
       ui.$('#dist').innerHTML = S.order.map(k => `<i class="bg-${S.cls(k)}" style="flex:${Math.max(s.dist[k], 0.01)}"></i>`).join('');
@@ -155,36 +158,80 @@
   };
 
   /* ================= PETA ================= */
+  const SRC = { inarisk: ['InaRISK BNPB', 'Indeks bahaya banjir resmi, dibaca langsung dari server BNPB'], arcgis: ['ArcGIS Online BPBD', 'Tersinkron otomatis dengan layer BPBD'], mymaps: ['My Maps BPBD', 'Dibaca langsung dari My Maps'], file: ['Peta bahaya banjir BPBD Prov. Papua', 'berkas KMZ dari Pusdalops (Okt 2026); perbarui berkas bila peta BPBD berubah'] };
   const peta = {
-    zones: true, pins: true,
+    zones: true, pins: true, ir: false, adm: true, poi: true, idx: 'bahaya', base: null, lm: null,
     render() {
-      main.innerHTML = `${topbar('Peta &amp; zona rawan bencana', 'Ilustrasi rencana lokasi sensor dengan zona rawan dari BPBD')}
+      const P = SB.peta, live = P && P.available(), M = C.map;
+      main.innerHTML = `${topbar('Peta &amp; zona rawan bencana', 'Lokasi sensor dan zona rawan banjir dari data BPBD')}
         <div class="cols map-cols">
-          <div class="map map-d"><div class="map-svg" id="map-svg"></div><p class="map-note">Ilustrasi · rencana titik pemasangan sensor</p></div>
+          <div class="map map-d">${live ? '<div class="lmap" id="lmap"></div>' : '<div class="map-svg" id="map-svg"></div>'}<p class="map-note" id="map-note">${live ? 'Memuat data zona…' : 'Ilustrasi · rencana titik pemasangan sensor'}</p></div>
           <div class="col-side">
             <article class="card"><div class="row-c"><span class="c-pri">${I('layers', 18)}</span><h2 class="h2">Lapisan peta</h2></div>
-              <label class="switch-row"><span>Zona rawan bencana</span><input type="checkbox" id="l-zone" ${this.zones ? 'checked' : ''}><span class="switch"></span></label>
-              <label class="switch-row"><span>Lokasi sensor</span><input type="checkbox" id="l-pin" ${this.pins ? 'checked' : ''}><span class="switch"></span></label></article>
-            <article class="card list pad-y0"><div class="li-h"><h2 class="h2">Klasifikasi zona rawan</h2><p class="muted sm">Indeks InaRISK (BNPB) · skala 0 – 1</p></div>
-              ${C.zoneIndex.map(z => `<div class="li ai-c"><i class="zsw z-${z.key}"></i><div class="grow"><strong class="sm">${z.label}</strong><p class="sub sm">Indeks ${z.range}</p></div></div>`).join('')}</article>
+              ${live && M.inarisk && M.inarisk.url ? `<label class="switch-row"><span>Indeks InaRISK</span><input type="checkbox" id="l-ir" ${this.ir ? 'checked' : ''}><span class="switch"></span></label>
+              <label class="field idx-sel">${I('layers', 16)}<select id="l-idx" aria-label="Jenis indeks InaRISK">${[{ key: 'bahaya', label: 'Indeks bahaya banjir' }].concat(M.inarisk.others || []).map(l => `<option value="${l.key}" ${l.key === this.idx ? 'selected' : ''}>${l.label}</option>`).join('')}</select></label>` : ''}
+              <label class="switch-row" id="l-zone-row"><span>Zona rawan ${live ? 'BPBD' : 'bencana'}</span><input type="checkbox" id="l-zone" ${this.zones ? 'checked' : ''}><span class="switch"></span></label>
+              ${live && M.adminUrl ? `<label class="switch-row"><span>Batas administrasi</span><input type="checkbox" id="l-adm" ${this.adm ? 'checked' : ''}><span class="switch"></span></label>` : ''}
+              ${live && M.poi && M.poi.url ? `<label class="switch-row"><span>Tempat penting <span class="muted sm" id="poi-hint"></span></span><input type="checkbox" id="l-poi" ${this.poi ? 'checked' : ''}><span class="switch"></span></label>` : ''}
+              <label class="switch-row"><span>Lokasi sensor</span><input type="checkbox" id="l-pin" ${this.pins ? 'checked' : ''}><span class="switch"></span></label>
+              ${live ? `<div class="seg" role="group" aria-label="Jenis peta">${Object.entries(P.BASE).map(([k, b]) => `<button type="button" data-b="${k}">${b.label}</button>`).join('')}</div>` : ''}</article>
+            <article class="card list pad-y0"><div class="li-h"><h2 class="h2">Klasifikasi zona bahaya</h2><p class="muted sm">Zona BPBD (kelas bahaya) dan indeks InaRISK (0 – 1) · ketuk peta untuk melihat keduanya</p></div>
+              ${C.zoneIndex.map(z => `<div class="li ai-c"><i class="zsw z-${z.key}"></i><div class="grow"><strong class="sm">${z.label}</strong><p class="sub sm">Indeks ${z.range}</p></div><span class="muted sm" data-zc="${z.key}"></span></div>`).join('')}</article>
+            ${live ? `<article class="card" id="z-src"><div class="row-c"><span class="c-pri">${I('db', 18)}</span><h2 class="h2">Sumber data zona</h2></div><p class="sub sm" id="z-src-t">Memuat…</p></article>` : ''}
             <article class="card sensor-card">
               <div class="row-c"><span class="badge lg" id="p-ic">${I('pin', 20)}</span><div class="grow"><p class="muted sm">Sensor terpilih</p><h2 class="h2">${esc(C.sensorName)}</h2></div><span id="p-pill"></span></div>
-              <p class="sub sm">${esc(C.locationNote)}</p><p class="big-val" id="p-val"></p><p class="muted sm" id="p-upd"></p>
-              <a class="btn btn-pri" href="#grafik">${I('chart', 16)}Lihat grafik sensor</a></article>
+              <p class="sub sm">${esc(C.locationNote)}${live ? ` · ${M.sensor.lat.toFixed(5)}, ${M.sensor.lng.toFixed(5)}${M.sensorApprox ? ' (perkiraan)' : ''}` : ''}</p><p class="big-val" id="p-val"></p><p class="muted sm" id="p-upd"></p>
+              <a class="btn btn-pri" href="#grafik">${I('chart', 16)}Lihat grafik sensor</a>
+              ${live ? `<a class="btn" href="${P.gmapsUrl(M.sensor.lat, M.sensor.lng)}" target="_blank" rel="noopener">${I('map', 16)}Buka di Google Maps</a>` : ''}</article>
           </div>
         </div>`;
-      ui.$('#l-zone').onchange = e => { this.zones = e.target.checked; this.update(snapNow()); };
-      ui.$('#l-pin').onchange = e => { this.pins = e.target.checked; this.update(snapNow()); };
+      ui.$('#l-zone').onchange = e => { this.zones = e.target.checked; this.lm ? this.lm.setZones(this.zones) : this.update(snapNow()); };
+      ui.$('#l-pin').onchange = e => { this.pins = e.target.checked; this.lm ? this.lm.setSensor(this.pins) : this.update(snapNow()); };
+      if (!live) return;
+      const POI_HINT = { zoom: '· perbesar peta', loading: '· memuat…', error: '· gagal dimuat', ok: '· OpenStreetMap' };
+      const lm = this.lm = SB.liveMap(ui.$('#lmap'), { zones: this.zones, sensor: this.pins, inarisk: this.ir, admin: this.adm, base: this.base,
+        poi: this.poi, onPoi: st => { const h = ui.$('#poi-hint'); if (h) h.textContent = POI_HINT[st] || ''; },
+        onZones: info => { this.zinfo = info; this.paintSrc(); }, onLayers: st => { this.lst = st; this.paintSrc(); } });
+      if (ui.$('#l-ir')) ui.$('#l-ir').onchange = e => { this.ir = e.target.checked; lm.setInarisk(this.ir); };
+      if (ui.$('#l-idx')) { lm.setIndex(this.idx); ui.$('#l-idx').onchange = e => { this.idx = e.target.value; lm.setIndex(this.idx); this.paintSrc(); }; }
+      if (ui.$('#l-poi')) ui.$('#l-poi').onchange = e => { this.poi = e.target.checked; lm.setPoi(this.poi); };
+      if (ui.$('#l-adm')) ui.$('#l-adm').onchange = e => { this.adm = e.target.checked; lm.setAdmin(this.adm); };
+      const paintBase = () => ui.$$('[data-b]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.b === lm.base())));
+      ui.$$('[data-b]').forEach(b => b.onclick = () => { lm.setBase(b.dataset.b); this.base = b.dataset.b; paintBase(); });
+      paintBase();
+    },
+    paintSrc() {
+      const n = ui.$('#map-note'), t = ui.$('#z-src-t'), info = this.zinfo, st = this.lst || {}; if (!t || !info) return;
+      if (info.error) { n.textContent = info.error; n.classList.add('warn'); t.textContent = info.error; return; }
+      const lines = [], notes = [];
+      const idxLabel = ((C.map.inarisk.others || []).find(l => l.key === this.idx) || { label: 'Indeks bahaya banjir' }).label;
+      if (info.inarisk) lines.push(`<strong>${SRC.inarisk[0]}</strong> · ${idxLabel.toLowerCase()} · ${st.inarisk === false ? '<span class="c-wr">layer gagal dimuat dari server BNPB</span>' : 'dibaca langsung dari server BNPB'}.`);
+      if (info.fc) {
+        const [name, how] = SRC[info.source], c = info.counts;
+        lines.push(`<strong>${info.sample ? 'Zona contoh (bukan data BPBD)' : 'Zona BPBD: ' + name}</strong> · ${info.sample ? 'ganti dengan data BPBD di config.js' : how}. ${c.total.toLocaleString('id-ID')} area${c.lain ? `, ${c.lain} tanpa kelas yang dikenali` : ''}.`);
+        ui.$$('[data-zc]').forEach(el => { el.textContent = c[el.dataset.zc].toLocaleString('id-ID') + ' area'; });
+      } else {
+        lines.push('<span class="muted">Zona rawan BPBD (area) belum dimasukkan.</span>');
+        ui.$('#l-zone-row').hidden = true;
+      }
+      if (info.notes && info.notes.length) notes.push(esc(info.notes.join(' ')));
+      t.innerHTML = lines.join('<br>') + (notes.length ? `<br><span class="c-wr">${notes.join(' ')}</span>` : '');
+      n.textContent = [info.fc ? (info.sample ? 'Zona contoh' : 'Zona BPBD') : '', info.inarisk && this.ir ? (st.inarisk === false ? 'Layer InaRISK gagal dimuat' : idxLabel + ': InaRISK BNPB') : ''].filter(Boolean).join(' · ');
+      n.classList.toggle('warn', !!(info.sample || st.inarisk === false));
     },
     update(snap) {
       const cur = snap.current, st = snap.status;
-      ui.$('#map-svg').innerHTML = SB.mapSVG({ status: st, level: cur.v, zones: this.zones });
-      if (!this.pins) ui.$$('#map-svg svg > circle, #map-svg svg > g:last-child').forEach(n => n.style.display = 'none');
+      if (this.lm) this.lm.update(snap);
+      else {
+        ui.$('#map-svg').innerHTML = SB.mapSVG({ status: st, level: cur.v, zones: this.zones });
+        if (!this.pins) ui.$$('#map-svg svg > circle, #map-svg svg > g:last-child').forEach(n => n.style.display = 'none');
+      }
       ui.$('#p-pill').innerHTML = ui.pill(st);
       ui.$('#p-ic').className = 'badge lg b-' + S.cls(st);
       ui.$('#p-val').textContent = F.level(cur.v);
       ui.$('#p-upd').textContent = 'Diperbarui ' + F.ago(cur.t);
-    }
+    },
+    leave() { if (this.lm) { this.lm.destroy(); this.lm = null; } }
   };
 
   /* ================= LAPORAN HISTORIS ================= */
@@ -218,7 +265,7 @@
       ui.$('#r-per').onchange = e => { this.hours = +e.target.value; this.page = 0; this.update(); };
       ui.$('#r-st').onchange = e => { this.status = e.target.value; this.page = 0; this.update(); };
       ui.$('#r-csv').onclick = () => this.csv();
-      ui.$('#r-pdf').onclick = () => window.print();
+      ui.$('#r-pdf').onclick = () => SB.laporanCetak.print(this.printOpts());
     },
     update() {
       const s = D.stats(this.hours), evs = D.getEvents().filter(e => e.t >= Date.now() - this.hours * HOUR && S.rank(e.to) > S.rank(e.from));
@@ -243,6 +290,7 @@
       ui.$('#r-pg').innerHTML = btns.join('');
       ui.$$('#r-pg .pgb').forEach(b => b.onclick = () => { this.page = +b.dataset.p; this.update(); });
     },
+    printOpts() { return { hours: this.hours, label: RANGES.find(r => r[0] === this.hours)[1], status: this.status, rows: this.rows() }; },
     csv() {
       const rows = this.rows();
       const lines = ['Tanggal,Waktu,Ketinggian (' + C.unit + '),Status,Keterangan'].concat(rows.map(r => [F.dateNum(r.t), F.time(r.t), Math.round(r.v), r.s, '"' + (r.note || '') + '"'].join(',')));
@@ -295,11 +343,18 @@
         const err = ui.$('#f-err');
         if (!judul.value.trim() || !isi.value.trim()) { err.textContent = 'Lengkapi judul dan isi pesan sebelum mengirim.'; err.hidden = false; (judul.value.trim() ? isi : judul).focus(); return; }
         err.hidden = true;
-        SB.imbauan.add({ judul: judul.value.trim(), isi: isi.value.trim(), target: this.target, push: ui.$('#f-push').checked, beranda: ui.$('#f-ber').checked, status });
-        SB.notify.toast(status === 'TERKIRIM'
-          ? { title: 'Imbauan terkirim', body: 'Pesan tampil di web warga dan dikirim sebagai notifikasi.', cls: 'ok', icon: 'send' }
-          : { title: 'Draf tersimpan', body: 'Draf dapat dikirim kemudian.', cls: 'pri', icon: 'save' });
-        judul.value = ''; isi.value = ''; preview(); this.paintHist();
+        const btns = ui.$$('#f button'); btns.forEach(b => b.disabled = true);
+        const now = this.target === 'SEMUA' || S.rank(D.getStatus()) >= S.rank(this.target), target = this.target, pushOn = ui.$('#f-push').checked;
+        SB.imbauan.add({ judul: judul.value.trim(), isi: isi.value.trim(), target, push: pushOn, beranda: ui.$('#f-ber').checked, status })
+          .then(() => {
+            SB.notify.toast(status === 'TERKIRIM'
+              ? (now ? { title: 'Imbauan terkirim', body: 'Pesan tampil di web warga' + (pushOn ? ' dan dikirim sebagai notifikasi.' : '.'), cls: 'ok', icon: 'send' }
+                : { title: 'Imbauan dijadwalkan', body: `Status saat ini ${D.getStatus()}. Pesan akan tampil dan dikirim ke warga saat status mencapai ${target}.`, cls: 'pri', icon: 'send' })
+              : { title: 'Draf tersimpan', body: 'Draf dapat dikirim kemudian.', cls: 'pri', icon: 'save' });
+            judul.value = ''; isi.value = ''; preview();
+          })
+          .catch(e => SB.notify.toast({ title: 'Imbauan belum terkirim', body: /permission|denied/i.test(e && e.message) ? 'Akses ditolak. Pastikan Anda masuk sebagai petugas BPBD.' : 'Periksa koneksi internet, lalu coba lagi.', cls: 'dg', icon: 'alert' }))
+          .finally(() => { btns.forEach(b => b.disabled = false); this.paintHist(); });
       };
       ui.$('#f').onsubmit = e => { e.preventDefault(); submit('TERKIRIM'); };
       ui.$('#f-draft').onclick = () => submit('DRAF');
@@ -371,7 +426,9 @@
 
   /* ================= ROUTER & DATA ================= */
   const views = { dashboard, grafik, peta, laporan, imbauan, notifikasi };
-  ui.router(Object.keys(views), 'dashboard', name => {
+  if (!sim) main.innerHTML = '<p class="empty">Menghubungkan ke sensor…</p>';
+  D.ready.then(() => ui.router(Object.keys(views), 'dashboard', name => {
+    if (active && active.leave) active.leave();
     active = views[name];
     document.body.classList.toggle('lock', !!active.lock);
     ui.$$('.nav a').forEach(a => a.dataset.r === name ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
@@ -379,7 +436,10 @@
     active.update(snapNow(), {});
     tick(); paintBadge();
     window.scrollTo(0, 0);
-  });
+  }));
+
+  /* Ctrl+P di halaman Laporan juga mencetak dokumen laporan A4 */
+  window.addEventListener('beforeprint', () => { if (active === laporan && !document.body.classList.contains('has-report')) SB.laporanCetak.build(laporan.printOpts()); });
 
   function tick() { const t = ui.$('#tb-time'); if (t) t.textContent = F.dateFull(Date.now()) + ' · ' + F.time(Date.now()) + ' WIT'; }
   setInterval(tick, 30000);
