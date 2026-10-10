@@ -3,13 +3,12 @@
  *  - Mode 'firebase': Firebase Authentication (email + kata sandi). Akun dibuat manual
  *    di konsol Firebase (tanpa pendaftaran). Aturan database (firebase-rules.json)
  *    membatasi penulisan imbauan hanya untuk pengguna yang sudah masuk.
- *  - Mode 'simulasi': akun demo lokal untuk pengujian antarmuka (bukan pengaman).
+ *  - Mode 'simulasi': tombol masuk simulasi tanpa kata sandi (data uji, tidak menulis ke Firebase).
  * bpbd.js baru dimuat setelah masuk berhasil.
  */
 (function () {
   const C = SB.config, ui = SB.ui, I = SB.icon;
   const A = C.auth || {};
-  const demo = A.demo || { email: 'petugas@bpbd.demo', password: 'demo1234' };
   const FB = C.firebase || {};
   const KEY = 'sb-bpbd-sesi';
   SB.ICONS.lock = '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>';
@@ -39,7 +38,7 @@
     if (av) av.textContent = email.slice(0, 2).toUpperCase();
     if (ds) ds.textContent = 'BPBD Provinsi Papua';
     if (started) return; started = true;
-    load('assets/js/bpbd.js?v=16');
+    load('assets/js/bpbd.js?v=21');
   }
   function error(msg) { const e = ui.$('#lg-err'); e.textContent = msg; e.hidden = !msg; }
   function busy(on) { const b = ui.$('#lg-btn'); b.disabled = on; b.querySelector('span:last-child').textContent = on ? 'Memeriksa…' : 'Masuk'; }
@@ -56,7 +55,11 @@
     const f = ui.$('#lg-form'), pw = ui.$('#lg-pw');
     ui.$('#lg-eye').onclick = () => { const h = pw.type === 'password'; pw.type = h ? 'text' : 'password'; ui.$('#lg-eye').innerHTML = I(h ? 'eyeoff' : 'eye', 18); ui.$('#lg-eye').setAttribute('aria-label', h ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'); };
     const hint = ui.$('#lg-demo');
-    if (!live) { hint.hidden = false; ui.$('#lg-demo-em').textContent = demo.email; ui.$('#lg-demo-pw').textContent = demo.password; ui.$('#lg-fill').onclick = () => { ui.$('#lg-em').value = demo.email; pw.value = demo.password; pw.focus(); }; }
+    const SIM = 'petugas.simulasi';
+    if (!live) {
+      hint.hidden = false; f.hidden = true;
+      ui.$('#lg-fill').onclick = () => { try { sessionStorage.setItem(KEY, SIM); } catch (x) { /* abaikan */ } start(SIM); };
+    }
     f.onsubmit = e => {
       e.preventDefault(); error('');
       const em = ui.$('#lg-em').value.trim(), p = pw.value;
@@ -68,12 +71,6 @@
           const c = err && err.code || '';
           error(/network/.test(c) ? 'Tidak dapat terhubung. Periksa koneksi internet.' : /too-many/.test(c) ? 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.' : /invalid|wrong|user-not-found/.test(c) ? 'Email atau kata sandi salah.' : 'Gagal masuk. Coba lagi.');
         });
-      } else {
-        setTimeout(() => {
-          busy(false);
-          if (em.toLowerCase() === demo.email && p === demo.password) { try { sessionStorage.setItem(KEY, em); } catch (x) { /* abaikan */ } start(em); }
-          else error('Email atau kata sandi salah.');
-        }, 350);
       }
     };
     ui.$('#btn-out').onclick = () => SB.auth.signOut();
@@ -83,7 +80,7 @@
       initFirebase().then(a => a.onAuthStateChanged(u => { if (u) start(u.email || 'petugas'); else if (started) location.reload(); else show(true); })).catch(() => error('Layanan masuk tidak dapat dimuat.'));
     } else {
       let s = null; try { s = sessionStorage.getItem(KEY); } catch (e) { /* abaikan */ }
-      if (s) start(s); else { show(true); ui.$('#lg-em').focus(); }
+      if (s) start(s); else { show(true); ui.$('#lg-fill').focus(); }
     }
   }
   boot();

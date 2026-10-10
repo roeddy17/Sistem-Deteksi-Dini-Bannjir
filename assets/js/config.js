@@ -33,8 +33,8 @@ SB.config = {
   },
 
   /* Masuk petugas BPBD. enabled:false menonaktifkan gerbang (tidak disarankan saat dipublikasikan).
-     Mode firebase memakai Firebase Authentication; mode simulasi memakai akun demo di bawah. */
-  auth: { enabled: true, demo: { email: 'petugas@bpbd.demo', password: 'demo1234' } },
+     Mode firebase memakai Firebase Authentication; mode simulasi cukup menekan tombol masuk simulasi. */
+  auth: { enabled: true },
 
   /* Diisi pada tahap integrasi Firebase Realtime Database */
   firebase: {
