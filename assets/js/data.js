@@ -176,6 +176,15 @@
       return out;
     }
     const valid = d => d && isFinite(+d.level);
+    /* sisipkan titik ke riwayat (urut waktu, tanpa duplikat waktu yang sama) */
+    function addPoint(p) {
+      let i = history.length;
+      while (i > 0 && history[i - 1].t > p.t) i--;
+      if (i > 0 && history[i - 1].t === p.t) { history[i - 1] = p; return; }
+      history.splice(i, 0, p);
+      const cut = serverNow() - 31 * DAY;
+      while (history.length && history[0].t < cut) history.shift();
+    }
     /* status dari alat (memakai histeresis yang sama dengan LCD/buzzer/Telegram); bila tidak ada, dihitung dari level */
     const devStatus = d => (S.order.includes(String(d.status).toUpperCase()) ? String(d.status).toUpperCase() : null);
 
@@ -189,6 +198,10 @@
       latency = Math.max(0, serverNow() - t);
       if (!current.placeholder && t === current.t && +d.level === current.v) return;
       current = { t, v: +d.level, s: devStatus(d) || undefined };
+      /* simpan juga pembacaan langsung (bila berubah, atau tiap 60 dtk) agar grafik bergerak
+         mulus di antara riwayat yang ditulis alat tiap 60 detik */
+      const lp = history[history.length - 1];
+      if (!lp || current.t - lp.t >= 60e3 || current.v !== lp.v || current.s !== lp.s) addPoint(current);
       try { localStorage.setItem('sb-last', JSON.stringify(current)); } catch (e) { /* abaikan */ }
       const prev = status; status = current.s || S.of(current.v);
       let changed = null;
@@ -209,12 +222,23 @@
         const db = app.database();
         db.ref('.info/serverTimeOffset').on('value', s => { offset = s.val() || 0; });
         db.ref('.info/connected').on('value', s => { connected = !!s.val(); emit({}); });
-        db.ref(base + '/history').orderByChild('ts').startAt(Date.now() - 31 * DAY).limitToLast(20000).once('value').then(snap => {
-          const pts = [];
-          snap.forEach(c => { const d = c.val(); if (valid(d) && isFinite(+d.ts)) pts.push({ t: +d.ts, v: +d.level, s: devStatus(d) || undefined }); });
-          pts.sort((a, b) => a.t - b.t);
-          history = pts; events = deriveEvents(history); lastLog = Date.now();
+        const hist = db.ref(base + '/history');
+        const toPoint = d => (valid(d) && isFinite(+d.ts) ? { t: +d.ts, v: +d.level, s: devStatus(d) || undefined } : null);
+        hist.orderByChild('ts').startAt(Date.now() - 31 * DAY).limitToLast(20000).once('value').then(snap => {
+          const live = history;                      // pembacaan langsung yang masuk sebelum riwayat selesai dimuat
+          history = [];
+          snap.forEach(c => { const p = toPoint(c.val()); if (p) history.push(p); });
+          history.sort((a, b) => a.t - b.t);
+          const lastT = history.length ? history[history.length - 1].t : Date.now() - 31 * DAY;
+          live.forEach(addPoint);
+          events = deriveEvents(history); lastLog = Date.now();
           emit({});
+          /* riwayat baru yang ditulis alat setelah halaman dibuka (sebelumnya hanya dimuat sekali,
+             sehingga grafik berhenti di saat halaman dibuka dan tampil "Tidak ada data") */
+          hist.orderByChild('ts').startAt(lastT + 1).on('child_added', c => {
+            const p = toPoint(c.val()); if (!p) return;
+            addPoint(p); emit({});
+          }, err => console.warn('Riwayat Firebase (baru):', err.message));
         }).catch(err => console.warn('Riwayat Firebase:', err.message));
         db.ref(base + '/latest').on('value', s => onLatest(s.val()), err => console.warn('Data terkini Firebase:', err.message));
       })

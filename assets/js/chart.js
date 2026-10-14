@@ -78,7 +78,9 @@
     const key = o.hours ? 'h' + o.hours : b0 + '-' + b1;
     if (el._sbZoom && el._sbZoom.key !== key) el._sbZoom = null;
     const z = !o.compact && o.hover && el._sbZoom;
-    const t0 = z ? Math.max(b0, z.from) : b0, t1 = z ? Math.min(b1, z.to) : b1;
+    /* perbesaran yang menyentuh 'kini' ikut bergeser saat data baru masuk */
+    const t1 = z ? (z.follow ? b1 : Math.min(b1, z.to)) : b1;
+    const t0 = z ? Math.max(b0, z.follow ? b1 - (z.to - z.from) : z.from) : b0;
     const span = Math.max(1, t1 - t0);
 
     /* data dalam rentang, plus satu titik di luar tiap tepi agar garis menyambung ke tepi */
@@ -182,6 +184,10 @@
         const pt = bs.map(b => [X(Math.min(Math.max(b.t, lo), hi)), Y(b.max)]);
         if (si === 0 && edgeIn) pt[0][0] = X(t0);
         if (si === bins.length - 1 && edgeOut) pt[pt.length - 1][0] = X(t1);
+        /* ruas terakhir berakhir tepat di nilai terkini (bukan di nilai tertinggi selang terakhir) */
+        if (si === bins.length - 1 && !edgeOut && last) {
+          pt.push([X(last.t), Y(last.v)]);
+        }
         if (pt.length === 1) pt.push([Math.min(X(t1), pt[0][0] + 3), pt[0][1]]);
         const d = pt.map((q, i) => (i ? 'L' : 'M') + f1(q[0]) + ' ' + f1(q[1])).join(' ');
         L.push(`<path d="${d} L${f1(pt[pt.length - 1][0])} ${Y(0)} L${f1(pt[0][0])} ${Y(0)} Z" fill="url(#${gid})"/>`);
@@ -233,14 +239,15 @@
       const minSpan = 15 * MIN;
       if (b - a < minSpan) { const c = (a + b) / 2; a = c - minSpan / 2; b = c + minSpan / 2; }
       a = Math.max(b0, a); b = Math.min(b1, b);
-      el._sbZoom = { key, from: a, to: b };
+      el._sbZoom = { key, from: a, to: b, follow: b >= b1 - Math.max(2 * MIN, (b - a) * 0.03) };
       rerender();
     };
     const tb = el.querySelector('.ch-tools button');
     if (tb) tb.onclick = () => {
       if (tb.dataset.z === 'reset') { el._sbZoom = null; rerender(); return; }
       const ext = pts[pts.length - 1].t - pts[0].t, m = Math.max(ext * 0.06, 10 * MIN);
-      zoomTo(pts[0].t - m, pts[pts.length - 1].t + m);
+      const lt = pts[pts.length - 1].t;
+      zoomTo(pts[0].t - m, b1 - lt <= lim ? b1 : lt + m);
     };
 
     const svg = el.firstChild, g = svg.querySelector('.hv'), sel = svg.querySelector('.sel');
