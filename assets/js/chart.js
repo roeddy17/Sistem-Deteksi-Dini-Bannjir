@@ -243,22 +243,31 @@
     }
     L.push('</svg>');
 
-    /* tombol perbesar */
-    /* selalu ada [+] [−]; "Perbesar ke data" bila sebagian rentang kosong, "Tampilkan semua" bila diperbesar */
-    let tools = '';
-    if (interactive) {
-      const empty = holes.reduce((n, [a, b]) => n + (b - a), 0) / span;
-      tools = `<button type="button" class="ch-btn ch-ic" data-z="in" aria-label="Perbesar" title="Perbesar">+</button>`
-        + `<button type="button" class="ch-btn ch-ic" data-z="out" aria-label="Perkecil" title="Perkecil"${z ? '' : ' disabled'}>−</button>`;
-      if (z) tools += `<button type="button" class="ch-btn" data-z="reset">Tampilkan semua</button>`;
-      else if (pts.length > 1 && empty > 0.05) tools += `<button type="button" class="ch-btn" data-z="fit">Perbesar ke data</button>`;
+    /* Gambar ditaruh di .ch-plot; tombol perbesar di .ch-tools dibuat SEKALI per elemen dan hanya
+       diperbarui keadaannya. (Bila tombol ikut dibuat ulang tiap gambar, klik beruntun bisa hilang
+       karena tombolnya terganti di antara tekan dan lepas.) */
+    if (!el._sbPlot || el._sbPlot.parentNode !== el) {
+      el.innerHTML = '<div class="ch-plot"></div>' + (interactive ? `<div class="ch-tools">
+        <button type="button" class="ch-btn ch-ic" data-z="in" aria-label="Perbesar" title="Perbesar">+</button>
+        <button type="button" class="ch-btn ch-ic" data-z="out" aria-label="Perkecil" title="Perkecil">−</button>
+        <button type="button" class="ch-btn" data-z="fit">Perbesar ke data</button>
+        <button type="button" class="ch-btn" data-z="reset">Tampilkan semua</button></div>` : '');
+      el._sbPlot = el.firstChild;
     }
-    el.innerHTML = L.join('') + (tools ? `<div class="ch-tools" style="left:${pad.l}px">${tools}</div>` : '');
+    el._sbPlot.innerHTML = L.join('');
     el.classList.toggle('is-zoom', !!z);
     if (!interactive) { el._sbS = null; return; }
+    /* selalu ada [+] [−]; "Perbesar ke data" bila sebagian rentang kosong, "Tampilkan semua" bila diperbesar */
+    const empty = holes.reduce((n, [a, b]) => n + (b - a), 0) / span;
+    const tools = el.querySelector('.ch-tools'), btn = k => tools.querySelector(`[data-z="${k}"]`);
+    tools.style.left = pad.l + 'px';
+    btn('in').disabled = span <= MIN_SPAN + 1000;
+    btn('out').disabled = !z;
+    btn('reset').hidden = !z;
+    btn('fit').hidden = !!z || !(pts.length > 1 && empty > 0.05);
 
     /* keadaan gambar ini, dipakai oleh penangan sentuh/tetikus (dipasang sekali per elemen) */
-    const svg = el.firstChild, g = svg.querySelector('.hv'), cap = svg.querySelector('.cap');
+    const svg = el._sbPlot.firstChild, g = svg.querySelector('.hv'), cap = svg.querySelector('.cap');
     const q = c => g.querySelector(c);
     const flat = agg ? [].concat(...bins) : pts;
     const S = el._sbS = { t0, t1, b0, b1, key, span, pad, W, iw, Y, X };
@@ -288,20 +297,30 @@
         : `${F.level(best.v)} · ${best.s || SB.status.of(best.v)}`;
       g.style.display = ''; el.classList.add('is-hv');
     };
-    el.querySelectorAll('.ch-tools button').forEach(tb => tb.onclick = () => {
-      const k = tb.dataset.z;
-      if (k === 'reset') { el._sbZoom = null; render(el); return; }
-      if (k === 'fit') {
-        const lt = pts[pts.length - 1].t, m = Math.max((lt - pts[0].t) * 0.06, 10 * MIN);
-        setView(el, pts[0].t - m, b1 - lt <= lim ? b1 : lt + m); return;
-      }
-      /* perbesar/perkecil 2×: bertumpu di tepi kanan bila sedang menampilkan "kini", selain itu di tengah */
-      const w = k === 'in' ? span / 2 : span * 2, right = t1 >= b1 - MIN;
-      const a = right ? t1 - w : (t0 + t1) / 2 - w / 2;
-      setView(el, a, a + w);
-    });
+    if (pts.length > 1) {
+      const lt = pts[pts.length - 1].t, m = Math.max((lt - pts[0].t) * 0.06, 10 * MIN);
+      S.fit = [pts[0].t - m, b1 - lt <= lim ? b1 : lt + m];
+    }
     bind(el);
     if (el._sbHx != null) S.showAt(el._sbHx);   // pertahankan crosshair saat data baru masuk
+  }
+
+  /* jendela waktu yang DIMINTA terakhir (bisa belum tergambar), agar klik/roda beruntun menumpuk */
+  function view(el) {
+    const S = el._sbS, z = el._sbZoom;
+    if (!z) return [S.b0, S.b1];
+    const w = z.to - z.from;
+    return z.follow ? [S.b1 - w, S.b1] : [z.from, z.to];
+  }
+
+  function zoomCmd(el, k) {
+    const S = el._sbS; if (!S) return;
+    if (k === 'reset') { el._sbZoom = null; render(el); return; }
+    if (k === 'fit') { if (S.fit) setView(el, S.fit[0], S.fit[1]); return; }
+    /* perbesar/perkecil 2×: bertumpu di tepi kanan bila sedang menampilkan "kini", selain itu di tengah */
+    const [a0, b0] = view(el), w = k === 'in' ? Math.max(MIN_SPAN, (b0 - a0) / 2) : (b0 - a0) * 2;
+    const a = b0 >= S.b1 - MIN ? b0 - w : (a0 + b0) / 2 - w / 2;
+    setView(el, a, a + w);
   }
 
   /* atur jendela waktu yang ditampilkan (dibatasi pada rentang yang dipilih) */
@@ -371,11 +390,16 @@
       const S = el._sbS; if (!S || !inPlot(e)) return;
       e.preventDefault();
       const x = Math.min(Math.max(toX(e), S.pad.l), S.W - S.pad.r), t = tAt(x);
-      const w = (S.t1 - S.t0) * Math.exp(Math.max(-100, Math.min(100, e.deltaY)) * 0.004);
+      const [va, vb] = view(el), w = (vb - va) * Math.exp(Math.max(-100, Math.min(100, e.deltaY)) * 0.004);
       const a = t - ((x - S.pad.l) / S.iw) * w;
       setView(el, a, a + w);
     }, { passive: false });
-    el.addEventListener('dblclick', () => { if (el._sbZoom) { el._sbZoom = null; render(el); } });
+    el.addEventListener('click', e => {
+      const b = e.target.closest && e.target.closest('.ch-btn');
+      if (b && !b.disabled) zoomCmd(el, b.dataset.z);
+    });
+    /* klik ganda di grafik (bukan di tombol) = kembali ke seluruh rentang */
+    el.addEventListener('dblclick', e => { if (inPlot(e) && el._sbZoom) { el._sbZoom = null; render(el); } });
   }
 
   /* Unduh grafik sebagai PNG */
