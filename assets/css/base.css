@@ -248,3 +248,14 @@ button { cursor: pointer; }
 .ch-tools { position: absolute; top: 0; display: flex; gap: 6px; }
 .ch-btn { font: 600 11px/1 Inter, system-ui, sans-serif; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--bd, #E5EAF0); background: var(--card, #fff); color: var(--pri, #0E5AA7); cursor: pointer; }
 .ch-btn:hover { background: var(--pri-s); }
+/* grafik: kursor, titik terkini berdenyut, geser halus saat nilai berubah */
+.chart .hit { cursor: crosshair; }
+.chart.is-zoom .hit { cursor: grab; }
+.chart.is-pan .hit { cursor: grabbing; }
+.chart.is-hv .ch-tools { opacity: 0; pointer-events: none; }
+.ch-tools { transition: opacity .15s; }
+.ch-pulse { transform-box: fill-box; transform-origin: center; animation: ch-pulse 1.6s ease-out infinite; }
+@keyframes ch-pulse { 0% { transform: scale(1); opacity: .45; } 100% { transform: scale(3.2); opacity: 0; } }
+.ch-slide { animation: ch-slide .45s cubic-bezier(.2, .8, .2, 1); }
+@keyframes ch-slide { from { transform: translateY(var(--dy)); } }
+@media (prefers-reduced-motion: reduce) { .ch-pulse, .ch-slide { animation: none; } }

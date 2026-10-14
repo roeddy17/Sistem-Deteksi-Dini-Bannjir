@@ -126,7 +126,7 @@
   };
 
   /* ================= GRAFIK ================= */
-  const RANGES = [[24, '24 Jam'], [168, '7 Hari'], [720, '30 Hari']];
+  const RANGES = [[1, '1 Jam'], [24, '24 Jam'], [168, '7 Hari'], [720, '30 Hari']];
   const grafik = {
     hours: 24,
     render() {

@@ -21,6 +21,7 @@
       <p class="v" id="${id}"></p><p class="stat-s" id="${subId}"></p></article>`;
   const seg = (ranges, cur, attr = 'h') => `<div class="seg" role="group" aria-label="Rentang waktu">${ranges.map(([v, l]) => `<button type="button" data-${attr}="${v}" aria-pressed="${v === cur}">${l}</button>`).join('')}</div>`;
   const RANGES = [[24, '24 Jam'], [168, '7 Hari'], [720, '30 Hari']];
+  const CRANGES = [[1, '1 Jam'], ...RANGES];   // rentang grafik (laporan tetap memakai RANGES)
   const snapNow = () => ({ current: D.getCurrent(), status: D.getStatus() });
 
   /* Kumpulan notifikasi: perubahan status + imbauan */
@@ -61,7 +62,7 @@
         </div>
         <div class="cols">
           <article class="card col-chart">
-            <div class="row-sb"><h2 class="h2">Grafik ketinggian air</h2>${seg(RANGES, this.hours)}</div>
+            <div class="row-sb"><h2 class="h2">Grafik ketinggian air</h2>${seg(CRANGES, this.hours)}</div>
             <div class="chart chart-lg" id="ch"></div>
           </article>
           <div class="col-side">
@@ -115,7 +116,7 @@
     hours: 168,
     render() {
       main.innerHTML = `${topbar('Grafik monitoring', 'Tren ketinggian air ' + esc(C.sensorName))}
-        <div class="toolbar">${seg(RANGES, this.hours)}<span class="sub sm row-c">${I('cal', 16)}<span id="g-range"></span></span><span class="grow"></span>
+        <div class="toolbar">${seg(CRANGES, this.hours)}<span class="sub sm row-c">${I('cal', 16)}<span id="g-range"></span></span><span class="grow"></span>
           <button type="button" class="btn" id="g-dl" aria-label="Unduh grafik">${I('dl', 16)}<span class="bl">Unduh grafik</span></button></div>
         <div class="stats4">
           ${statCard('up', 'dg', 'Tertinggi', 'g-max', 'g-max-s')}
@@ -138,7 +139,7 @@
       ui.$('#g-dl').onclick = () => SB.chartToPNG(ui.$('#ch'), `grafik-ketinggian-air-${this.hours}jam.png`);
     },
     update() {
-      const h = this.hours, s = D.stats(h), label = RANGES.find(r => r[0] === h)[1];
+      const h = this.hours, s = D.stats(h), label = CRANGES.find(r => r[0] === h)[1];
       ui.$('#g-range').textContent = `${F.date(Date.now() - h * HOUR)} – ${F.date(Date.now())}`;
       ui.$('#g-title').textContent = 'Ketinggian air · ' + label;
       ui.$('#g-max').textContent = F.level(s.max.v); ui.$('#g-max').className = 'v c-dg'; ui.$('#g-max-s').textContent = F.date(s.max.t) + ' · ' + F.time(s.max.t);
