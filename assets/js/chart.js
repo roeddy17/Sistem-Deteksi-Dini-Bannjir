@@ -244,10 +244,14 @@
     L.push('</svg>');
 
     /* tombol perbesar */
+    /* selalu ada [+] [−]; "Perbesar ke data" bila sebagian rentang kosong, "Tampilkan semua" bila diperbesar */
     let tools = '';
     if (interactive) {
-      if (z) tools = `<button type="button" class="ch-btn" data-z="reset">Tampilkan semua</button>`;
-      else if (pts.length > 1 && last.t - pts[0].t < 0.6 * span) tools = `<button type="button" class="ch-btn" data-z="fit">Perbesar ke data</button>`;
+      const empty = holes.reduce((n, [a, b]) => n + (b - a), 0) / span;
+      tools = `<button type="button" class="ch-btn ch-ic" data-z="in" aria-label="Perbesar" title="Perbesar">+</button>`
+        + `<button type="button" class="ch-btn ch-ic" data-z="out" aria-label="Perkecil" title="Perkecil"${z ? '' : ' disabled'}>−</button>`;
+      if (z) tools += `<button type="button" class="ch-btn" data-z="reset">Tampilkan semua</button>`;
+      else if (pts.length > 1 && empty > 0.05) tools += `<button type="button" class="ch-btn" data-z="fit">Perbesar ke data</button>`;
     }
     el.innerHTML = L.join('') + (tools ? `<div class="ch-tools" style="left:${pad.l}px">${tools}</div>` : '');
     el.classList.toggle('is-zoom', !!z);
@@ -284,12 +288,18 @@
         : `${F.level(best.v)} · ${best.s || SB.status.of(best.v)}`;
       g.style.display = ''; el.classList.add('is-hv');
     };
-    const tb = el.querySelector('.ch-tools button');
-    if (tb) tb.onclick = () => {
-      if (tb.dataset.z === 'reset') { el._sbZoom = null; render(el); return; }
-      const lt = pts[pts.length - 1].t, m = Math.max((lt - pts[0].t) * 0.06, 10 * MIN);
-      setView(el, pts[0].t - m, b1 - lt <= lim ? b1 : lt + m);
-    };
+    el.querySelectorAll('.ch-tools button').forEach(tb => tb.onclick = () => {
+      const k = tb.dataset.z;
+      if (k === 'reset') { el._sbZoom = null; render(el); return; }
+      if (k === 'fit') {
+        const lt = pts[pts.length - 1].t, m = Math.max((lt - pts[0].t) * 0.06, 10 * MIN);
+        setView(el, pts[0].t - m, b1 - lt <= lim ? b1 : lt + m); return;
+      }
+      /* perbesar/perkecil 2×: bertumpu di tepi kanan bila sedang menampilkan "kini", selain itu di tengah */
+      const w = k === 'in' ? span / 2 : span * 2, right = t1 >= b1 - MIN;
+      const a = right ? t1 - w : (t0 + t1) / 2 - w / 2;
+      setView(el, a, a + w);
+    });
     bind(el);
     if (el._sbHx != null) S.showAt(el._sbHx);   // pertahankan crosshair saat data baru masuk
   }

@@ -248,6 +248,8 @@ button { cursor: pointer; }
 .ch-tools { position: absolute; top: 0; display: flex; gap: 6px; }
 .ch-btn { font: 600 11px/1 Inter, system-ui, sans-serif; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--bd, #E5EAF0); background: var(--card, #fff); color: var(--pri, #0E5AA7); cursor: pointer; }
 .ch-btn:hover { background: var(--pri-s); }
+.ch-btn.ch-ic { width: 24px; padding: 5px 0; font-size: 14px; line-height: 12px; }
+.ch-btn:disabled { color: var(--tx3, #94A3B8); background: var(--card, #fff); cursor: default; }
 /* grafik: kursor, titik terkini berdenyut, geser halus saat nilai berubah */
 .chart .hit { cursor: crosshair; }
 .chart.is-zoom .hit { cursor: grab; }
