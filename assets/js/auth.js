@@ -38,7 +38,7 @@
     if (av) av.textContent = email.slice(0, 2).toUpperCase();
     if (ds) ds.textContent = 'BPBD Provinsi Papua';
     if (started) return; started = true;
-    load('assets/js/bpbd.js?v=21');
+    load('assets/js/bpbd.js?v=22');
   }
   function error(msg) { const e = ui.$('#lg-err'); e.textContent = msg; e.hidden = !msg; }
   function busy(on) { const b = ui.$('#lg-btn'); b.disabled = on; b.querySelector('span:last-child').textContent = on ? 'Memeriksa…' : 'Masuk'; }
