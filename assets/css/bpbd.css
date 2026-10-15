@@ -25,7 +25,7 @@ body.bpbd { --gut: clamp(14px, 2.4vw, 32px); --nav-h: 0px; }
 
 /* layar terkunci (Notifikasi): hanya kartu daftar yang bergulir */
 body.bpbd.lock { overflow: hidden; }
-body.bpbd.lock #view { height: 100vh; height: 100dvh; overflow: hidden; }
+body.bpbd.lock:not(.fit) #view { height: 100vh; height: 100dvh; overflow: hidden; }
 body.bpbd.lock #view > * { flex: none; }
 body.bpbd.lock #view > .n-cols { flex: 1 1 auto; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
 body.bpbd.lock .n-side { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
@@ -146,32 +146,34 @@ td { padding: 12px 24px; border-top: 1px solid var(--bd); }
 .n-tools .chips { order: 5; flex: 1 1 100%; }
 .thr { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--bd); border-radius: 12px; padding: 11px 12px; font-size: 13px; }
 
-/* ---------- layar sedang: kolom samping turun ke bawah ---------- */
+/* ---------- layar sedang (tanpa mode pas-layar): kolom samping turun ke bawah ---------- */
 @media (max-width: 1100px) {
-  .map-d { position: relative; top: auto; height: clamp(320px, 55vh, 560px); }
-  .stats4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .cols { grid-template-columns: minmax(0, 1fr); }
-  .col-side { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); align-items: start; }
-  /* notifikasi: pengaturan menjadi lembar dari bawah */
-  .n-set-btn { display: inline-flex; }
-  .n-cols .n-side { display: none; }
-  .n-cols.show-set .n-side { display: flex; flex-direction: column; position: fixed; z-index: 80; left: 50%; bottom: 0; transform: translateX(-50%); width: min(560px, 100%); max-height: 85vh; max-height: 85dvh; overflow-y: auto; background: var(--bg); border-radius: 22px 22px 0 0; padding: 18px var(--gut) calc(18px + env(safe-area-inset-bottom)); box-shadow: 0 -12px 40px rgba(15, 23, 42, .2); animation: sheet .22s ease-out; }
-  .n-cols.show-set .n-backdrop { display: block; position: fixed; inset: 0; z-index: 79; background: rgba(15, 23, 42, .4); }
-  .n-side .sheet-h { display: flex; }
+  body:not(.fit) .map-d { position: relative; top: auto; height: clamp(320px, 55vh, 560px); }
+  body:not(.fit) .stats4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body:not(.fit) .cols { grid-template-columns: minmax(0, 1fr); }
+  body:not(.fit) .col-side { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); align-items: start; }
+}
+/* notifikasi: pengaturan menjadi lembar dari bawah (layar sedang / pas-layar tegak) */
+@media (max-width: 1100px) {
+  body:not(.fit) .n-set-btn { display: inline-flex; }
+  body:not(.fit) .n-cols .n-side { display: none; }
+  body:not(.fit) .n-cols.show-set .n-side { display: flex; flex-direction: column; position: fixed; z-index: 80; left: 50%; bottom: 0; transform: translateX(-50%); width: min(560px, 100%); max-height: 85vh; max-height: 85dvh; overflow-y: auto; background: var(--bg); border-radius: 22px 22px 0 0; padding: 18px var(--gut) calc(18px + env(safe-area-inset-bottom)); box-shadow: 0 -12px 40px rgba(15, 23, 42, .2); animation: sheet .22s ease-out; }
+  body:not(.fit) .n-cols.show-set .n-backdrop { display: block; position: fixed; inset: 0; z-index: 79; background: rgba(15, 23, 42, .4); }
+  body:not(.fit) .n-side .sheet-h { display: flex; }
 }
 @keyframes sheet { from { transform: translate(-50%, 24px); opacity: 0; } }
 
-/* ---------- tablet (768–1100 px): sidebar menjadi rail ikon ---------- */
+/* ---------- tablet (768–1100 px) tanpa mode pas-layar: sidebar menjadi rail ikon ---------- */
 @media (min-width: 768px) and (max-width: 1100px) {
-  .layout { grid-template-columns: 80px minmax(0, 1fr); }
-  .side { padding: 20px 12px; align-items: center; }
-  .brand { padding: 0 0 20px; } .brand > div { display: none; }
-  .side-l, .src, .user > div { display: none; }
-  .nav { width: 100%; }
-  .nav a { justify-content: center; padding: 12px 0; }
-  .nl { display: none; }
-  .nav .cnt { position: absolute; top: 3px; right: 3px; margin: 0; padding: 1px 5px; font-size: 10px; }
-  .user { padding: 0; }
+  body:not(.fit) .layout { grid-template-columns: 80px minmax(0, 1fr); }
+  body:not(.fit) .side { padding: 20px 12px; align-items: center; }
+  body:not(.fit) .brand { padding: 0 0 20px; } body:not(.fit) .brand > div { display: none; }
+  body:not(.fit) .side-l, body:not(.fit) .src, body:not(.fit) .user > div { display: none; }
+  body:not(.fit) .nav { width: 100%; }
+  body:not(.fit) .nav a { justify-content: center; padding: 12px 0; }
+  body:not(.fit) .nl { display: none; }
+  body:not(.fit) .nav .cnt { position: absolute; top: 3px; right: 3px; margin: 0; padding: 1px 5px; font-size: 10px; }
+  body:not(.fit) .user { padding: 0; }
 }
 
 /* ---------- HP (< 768 px): navigasi bawah ---------- */
@@ -281,3 +283,119 @@ body.locked .layout { display: none; }
 .btn-out { margin-left: auto; width: 36px; height: 36px; border: 0; background: transparent; color: var(--tx2); border-radius: 10px; display: grid; place-items: center; cursor: pointer; flex: none; }
 .btn-out:hover { background: var(--bg); color: var(--dg-t); }
 @media (max-width: 980px) { .btn-out { display: none; } }
+
+/* =====================================================================
+   MODE PAS LAYAR (laptop, desktop, tablet; bukan HP)
+   Seluruh tampilan dirancang pada kanvas ±1280×820 (mendatar) atau ±860×1100 (tegak),
+   lalu diperbesar/diperkecil seragam dengan CSS zoom (--k, dihitung di bpbd.js) sehingga
+   selalu pas satu layar tanpa bilah gulir: layar lebih besar = isi lebih besar.
+   Bagian yang bisa panjang (grafik, peta, tabel, daftar) mengisi sisa tinggi; tabel dan
+   daftar menyesuaikan jumlah baris dengan ruang yang tersedia.
+   ===================================================================== */
+html:has(body.fit), body.bpbd.fit { overflow: hidden; height: 100%; }
+body.fit .layout { zoom: var(--k, 1); width: var(--appW); height: var(--appH); min-height: 0; grid-template-columns: 236px minmax(0, 1fr); }
+body.fit .side { position: relative; height: 100%; padding: 22px 14px 18px; }
+body.fit .brand { padding-bottom: 20px; }
+body.fit #view { height: 100%; min-height: 0; overflow: hidden; padding: 20px 26px 22px; gap: 16px; }
+body.fit #view > * { flex: none; }
+body.fit #view > .fill { flex: 1 1 0; min-height: 0; }
+body.fit .topbar { flex-wrap: nowrap; }
+body.fit .topbar h1 { font-size: 24px; line-height: 1.2; }
+body.fit .topbar p { font-size: 13px; }
+body.fit .card { padding: 16px 18px; }
+body.fit .pad-y0 { padding-top: 2px; padding-bottom: 2px; }
+
+/* kartu status (dashboard) lebih ringkas */
+body.fit .hero-wide { padding: 16px 28px 16px 20px; gap: 18px; }
+body.fit .hero-wide .hero-ic.xl { width: 60px; height: 60px; }
+body.fit .hero-wide .hero-status { font-size: 36px; }
+body.fit .hero-wide .hero-desc { font-size: 13px; }
+body.fit .hero-val b { font-size: 46px; }
+
+body.fit .stats4 { gap: 16px; }
+body.fit .stat { padding: 14px 16px; gap: 4px; }
+body.fit .stat .v { font-size: 24px; line-height: 1.2; }
+
+/* kolom: isi utama + kolom samping, keduanya setinggi sisa layar */
+body.fit .cols { grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: stretch; }
+body.fit .cols > * { min-height: 0; }
+body.fit .col-side { min-height: 0; gap: 16px; overflow: hidden; }
+body.fit .col-side > * { flex: none; }
+body.fit .col-side > .grow-card { flex: 1 1 0; min-height: 0; overflow: hidden; }
+body.fit .col-chart { min-height: 0; }
+body.fit .col-chart .chart { flex: 1 1 0; min-height: 0; height: auto; }
+body.fit .fit-list { flex: 1 1 0; min-height: 0; overflow: hidden; }
+body.fit .fit-more { font-size: 12px; font-weight: 600; color: var(--tx3); padding: 8px 0 10px; }
+
+/* peta */
+body.fit .map-d { position: relative; top: auto; height: 100%; }
+body.fit .map-cols .col-side { gap: 12px; }
+body.fit .map-cols .card { padding: 14px 16px; gap: 8px; }
+body.fit .switch-row { padding: 1px 0; }
+body.fit .map-cols .li { padding: 8px 0; }
+body.fit .map-cols .li-h { padding: 12px 0 6px; }
+body.fit .clamp4 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+body.fit .sensor-card .big-val { font-size: 28px; }
+body.fit .sensor-card .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+body.fit .sensor-card .btns .btn { padding: 9px 10px; }
+
+/* laporan: tabel mengisi sisa tinggi, jumlah baris per halaman mengikuti ruang */
+body.fit .table-card { display: flex; flex-direction: column; }
+body.fit .table-wrap { flex: 1 1 0; min-height: 0; overflow: hidden; }
+body.fit th { padding: 11px 24px; }
+body.fit td { padding: 10px 24px; }
+body.fit .pager { padding: 10px 24px; }
+body.fit .info { padding: 10px 16px; }
+
+/* imbauan */
+body.fit .form { padding: 18px 22px; gap: 14px; min-height: 0; overflow: hidden; }
+body.fit .form textarea { resize: none; }
+body.fit .form .fl-grow { flex: 1 1 0; min-height: 0; }
+body.fit .form .fl-grow textarea { flex: 1; min-height: 72px; }
+
+/* notifikasi: daftar berhalaman (tanpa gulir) */
+body.fit.lock #view > .n-cols { flex: 1 1 0; }
+body.fit .n-list { display: flex; flex-direction: column; padding: 0; }
+body.fit .n-list .fit-list { padding: 2px 0; }
+body.fit .n-pager { display: flex; }
+body.fit .nrow { padding: 12px 22px; }
+.n-pager { display: none; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 22px; border-top: 1px solid var(--bd); }
+
+/* ---------- pas layar, kanvas tegak/sempit (tablet berdiri): rail ikon, kolom samping di bawah ---------- */
+body.fit-narrow .layout { grid-template-columns: 76px minmax(0, 1fr); }
+body.fit-narrow .side { padding: 20px 12px; align-items: center; }
+body.fit-narrow .brand { padding: 0 0 20px; } body.fit-narrow .brand > div { display: none; }
+body.fit-narrow .side-l, body.fit-narrow .src, body.fit-narrow .user > div { display: none; }
+body.fit-narrow .nav { width: 100%; }
+body.fit-narrow .nav a { justify-content: center; padding: 12px 0; }
+body.fit-narrow .nl { display: none; }
+body.fit-narrow .nav .cnt { position: absolute; top: 3px; right: 3px; margin: 0; padding: 1px 5px; font-size: 10px; }
+body.fit-narrow .user { padding: 0; }
+body.fit-narrow .btn-out { display: grid; margin: 0; }
+body.fit-narrow #view { padding: 20px 22px; }
+body.fit-narrow .cols { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+body.fit-narrow .col-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; overflow: visible; }
+body.fit-narrow .col-side > .grow-card { flex: none; }
+body.fit-narrow .col-side > * { min-height: 0; max-height: 300px; overflow: hidden; }
+body.fit-narrow .map-cols { grid-template-rows: minmax(0, 1fr) auto; }
+body.fit-narrow .map-cols .col-side > * { max-height: none; }
+body.fit-narrow .hero-wide .hero-desc { max-width: 40ch; }
+/* notifikasi tegak: pengaturan sebagai lembar dari bawah */
+body.fit-narrow .n-cols { grid-template-rows: minmax(0, 1fr); }
+body.fit-narrow .n-set-btn { display: inline-flex; }
+body.fit-narrow .n-cols .n-side { display: none; }
+body.fit-narrow .n-cols.show-set .n-side { display: flex; flex-direction: column; position: fixed; z-index: 80; left: 50%; bottom: 0; transform: translateX(-50%); width: min(560px, 100%); max-height: 85%; background: var(--bg); border-radius: 22px 22px 0 0; padding: 18px 20px; box-shadow: 0 -12px 40px rgba(15, 23, 42, .2); max-height: none; }
+body.fit-narrow .n-cols.show-set .n-backdrop { display: block; position: fixed; inset: 0; z-index: 79; background: rgba(15, 23, 42, .4); }
+body.fit-narrow .n-side .sheet-h { display: flex; }
+body.fit-narrow .user { flex-direction: column; gap: 8px; }
+.fit-list { position: relative; }
+/* peta pas layar: klasifikasi zona menjadi legenda di atas peta, sensor terpilih paling atas */
+.map-legend { display: none; }
+body.fit .map-legend { display: flex; flex-direction: column; gap: 6px; position: absolute; z-index: 1000; left: 12px; top: 12px; background: rgba(255, 255, 255, .94); border: 1px solid var(--bd); border-radius: 12px; padding: 10px 12px; box-shadow: var(--sh); font-size: 12px; color: var(--tx2); min-width: 170px; }
+body.fit .map-legend b { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--tx3); }
+body.fit .map-legend span { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--tx); }
+body.fit .map-legend .zsw { width: 14px; height: 14px; border-radius: 4px; }
+body.fit .map-legend em { margin-left: auto; padding-left: 10px; font-style: normal; font-weight: 500; color: var(--tx3); }
+body.fit .zone-card { display: none; }
+body.fit .map-cols .sensor-card { order: -1; }
+body.fit-narrow .chip-time { display: none; }

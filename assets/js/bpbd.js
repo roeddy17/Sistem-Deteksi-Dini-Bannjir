@@ -23,6 +23,38 @@
   const RANGES = [[24, '24 Jam'], [168, '7 Hari'], [720, '30 Hari']];
   const CRANGES = [[1, '1 Jam'], ...RANGES];   // rentang grafik (laporan tetap memakai RANGES)
   const snapNow = () => ({ current: D.getCurrent(), status: D.getStatus() });
+  const isFit = () => document.body.classList.contains('fit');
+
+  /* Mode pas layar (bukan HP): seluruh panel diskalakan seragam (CSS zoom) agar selalu pas satu
+     layar tanpa bilah gulir. Kanvas rancangan ±1280×820 (mendatar) atau ±860×1100 (tegak). */
+  function fitScreen() {
+    const w = window.innerWidth, h = window.innerHeight, b = document.body, R = document.documentElement.style;
+    const on = w >= 768 && Math.min(w, h) >= 600;
+    b.classList.toggle('fit', on);
+    if (!on) { b.classList.remove('fit-narrow'); ['--k', '--appW', '--appH'].forEach(v => R.removeProperty(v)); return; }
+    const port = h > w * 1.05, Wb = port ? 860 : 1280, Hb = port ? 1100 : 820;
+    const k = Math.min(3, Math.max(0.75, Math.min(w / Wb, h / Hb)));
+    R.setProperty('--k', k.toFixed(4));
+    R.setProperty('--appW', (w / k).toFixed(2) + 'px');
+    R.setProperty('--appH', (h / k).toFixed(2) + 'px');
+    b.classList.toggle('fit-narrow', w / k < 1100);
+  }
+  fitScreen();
+
+  /* Daftar dalam kartu: tampilkan sebanyak yang muat, sisanya disembunyikan (tanpa gulir) */
+  function fitList(box, moreEl) {
+    if (!box) return;
+    const kids = Array.from(box.children);
+    kids.forEach(k => { k.hidden = false; });
+    let hidden = 0;
+    if (isFit()) {
+      const lim = box.clientHeight;
+      let over = false;
+      kids.forEach(k => { if (!over && k.offsetTop + k.offsetHeight > lim + 1) over = true; if (over) { k.hidden = true; hidden++; } });
+    }
+    if (moreEl) { moreEl.hidden = !hidden; moreEl.textContent = hidden ? `+${hidden} lainnya` : ''; }
+    return kids.length - hidden;
+  }
 
   /* Kumpulan notifikasi: perubahan status + imbauan */
   function feed() {
@@ -60,16 +92,16 @@
           ${statCard('down', 'ok', 'Terendah hari ini', 's-min', 's-min-s')}
           ${statCard(sim ? 'sliders' : 'wifi', 'pri', 'Sumber data', 's-src', 's-src-s')}
         </div>
-        <div class="cols">
+        <div class="cols fill">
           <article class="card col-chart">
             <div class="row-sb"><h2 class="h2">Grafik ketinggian air</h2>${seg(CRANGES, this.hours)}</div>
             <div class="chart chart-lg" id="ch"></div>
           </article>
           <div class="col-side">
             <article class="imb-card" id="imb"></article>
-            <article class="card list pad-y0">
+            <article class="card list pad-y0 grow-card">
               <div class="row-sb li-h"><h2 class="h2">Notifikasi terbaru</h2><a class="link" href="#notifikasi">Lihat semua ${I('chev', 14)}</a></div>
-              <div id="mini-feed"></div>
+              <div id="mini-feed" class="fit-list list"></div>
             </article>
           </div>
         </div>`;
@@ -84,9 +116,11 @@
       box.innerHTML = `<div class="row-c"><span class="badge b-solid">${I('mega', 17)}</span><h2 class="h2 grow c-pri-d">Imbauan terakhir</h2>${it ? (live ? ui.tag('TAMPIL DI WARGA', 'ok') : ui.tag('MENUNGGU ' + it.target, 'wr')) : ''}</div>
         ${it ? `<p>${esc(it.isi)}</p><p class="muted sm">Dikirim ${F.time(it.t)} · ${it.target === 'SEMUA' ? 'tampil pada semua status' : 'tampil saat status ' + it.target}</p>` : '<p class="sub">Belum ada imbauan yang dikirim.</p>'}
         <a class="btn btn-pri" href="#imbauan">${I('plus', 16)}Kirim imbauan baru</a>`;
-      ui.$('#mini-feed').innerHTML = feed().slice(0, 3).map(i => `
+      ui.$('#mini-feed').innerHTML = feed().slice(0, isFit() ? 12 : 3).map(i => `
         <div class="li ai-c"><span class="badge b-${i.cls}">${I(i.icon, 16)}</span><div class="grow"><strong class="sm">${i.title}</strong><p class="sm sub">${esc(i.desc)}</p></div><span class="muted sm">${F.dayLabel(i.t) === 'Hari ini' ? F.time(i.t) : F.dayLabel(i.t).toLowerCase()}</span></div>`).join('');
+      fitList(ui.$('#mini-feed'));
     },
+    relayout() { this.paintSide(); this.update(snapNow(), {}); },
     update(snap, extra) {
       const cur = snap.current, st = snap.status, hero = ui.$('#hero');
       hero.className = 'hero hero-wide hero-' + S.cls(st);
@@ -124,13 +158,13 @@
           ${statCard('avg', 'pri', 'Rata-rata', 'g-avg', 'g-avg-s')}
           ${statCard('clock', 'wr', 'Di atas batas siaga', 'g-ab', 'g-ab-s')}
         </div>
-        <div class="cols">
+        <div class="cols fill">
           <article class="card col-chart"><div class="row-sb"><h2 class="h2" id="g-title"></h2>
             <div class="legend-l"><span><i class="ln"></i>Ketinggian air</span><span><i class="ln d wr"></i>Siaga</span><span><i class="ln d dg"></i>Bahaya</span></div></div>
             <div class="chart chart-xl" id="ch"></div></article>
           <div class="col-side">
             <article class="card"><h2 class="h2">Sebaran status</h2><p class="muted sm" id="d-sub"></p><div class="dist" id="dist"></div><div id="dist-l"></div></article>
-            <article class="card list pad-y0"><div class="li-h"><h2 class="h2">Kejadian melewati batas</h2><p class="muted sm">Pada rentang yang dipilih</p></div><div id="ev"></div></article>
+            <article class="card list pad-y0 grow-card"><div class="li-h"><h2 class="h2">Kejadian melewati batas</h2><p class="muted sm">Pada rentang yang dipilih <span id="ev-more"></span></p></div><div id="ev" class="fit-list list"></div></article>
           </div>
         </div>`;
       ui.$$('.seg button').forEach(b => b.onclick = () => {
@@ -152,9 +186,11 @@
       ui.$('#dist').innerHTML = S.order.map(k => `<i class="bg-${S.cls(k)}" style="flex:${Math.max(s.dist[k], 0.01)}"></i>`).join('');
       ui.$('#dist-l').innerHTML = S.order.map(k => `<div class="row-c dl"><i class="dot bg-${S.cls(k)}"></i><span class="grow sub">${k[0] + k.slice(1).toLowerCase()}</span><strong>${pct(k)}%</strong></div>`).join('');
       const from = Date.now() - h * HOUR;
-      const evs = D.getEvents().filter(e => e.t >= from && S.rank(e.to) > S.rank(e.from)).slice(0, 5);
+      const all = D.getEvents().filter(e => e.t >= from && S.rank(e.to) > S.rank(e.from)), evs = all.slice(0, isFit() ? 30 : 5);
       ui.$('#ev').innerHTML = evs.length ? evs.map(e => `<div class="li ai-c">${ui.pill(e.to)}<div class="grow"><strong class="sm">${F.level(e.level)}</strong><p class="muted sm">${F.date(e.t)} · ${F.time(e.t)}</p></div></div>`).join('')
         : '<p class="empty-s">Tidak ada kejadian melewati batas.</p>';
+      const shown = fitList(ui.$('#ev'));
+      ui.$('#ev-more').textContent = all.length > shown && evs.length ? `· ${shown} terbaru dari ${all.length}` : '';
     }
   };
 
@@ -165,8 +201,8 @@
     render() {
       const P = SB.peta, live = P && P.available(), M = C.map;
       main.innerHTML = `${topbar('Peta &amp; zona rawan bencana', 'Lokasi sensor dan zona rawan banjir dari data BPBD')}
-        <div class="cols map-cols">
-          <div class="map map-d">${live ? '<div class="lmap" id="lmap"></div>' : '<div class="map-svg" id="map-svg"></div>'}<p class="map-note" id="map-note">${live ? 'Memuat data zona…' : 'Ilustrasi · rencana titik pemasangan sensor'}</p></div>
+        <div class="cols map-cols fill">
+          <div class="map map-d">${live ? '<div class="lmap" id="lmap"></div>' : '<div class="map-svg" id="map-svg"></div>'}<div class="map-legend" aria-label="Klasifikasi zona bahaya"><b>Zona bahaya ${live ? 'BPBD' : ''}</b>${C.zoneIndex.map(z => `<span><i class="zsw z-${z.key}"></i>${z.label}<em data-zc="${z.key}"></em></span>`).join('')}</div><p class="map-note" id="map-note">${live ? 'Memuat data zona…' : 'Ilustrasi · rencana titik pemasangan sensor'}</p></div>
           <div class="col-side">
             <article class="card"><div class="row-c"><span class="c-pri">${I('layers', 18)}</span><h2 class="h2">Lapisan peta</h2></div>
               ${live && M.inarisk && M.inarisk.url ? `<label class="switch-row"><span>Indeks InaRISK</span><input type="checkbox" id="l-ir" ${this.ir ? 'checked' : ''}><span class="switch"></span></label>
@@ -176,14 +212,14 @@
               ${live && M.poi && M.poi.url ? `<label class="switch-row"><span>Tempat penting <span class="muted sm" id="poi-hint"></span></span><input type="checkbox" id="l-poi" ${this.poi ? 'checked' : ''}><span class="switch"></span></label>` : ''}
               <label class="switch-row"><span>Lokasi sensor</span><input type="checkbox" id="l-pin" ${this.pins ? 'checked' : ''}><span class="switch"></span></label>
               ${live ? `<div class="seg" role="group" aria-label="Jenis peta">${Object.entries(P.BASE).map(([k, b]) => `<button type="button" data-b="${k}">${b.label}</button>`).join('')}</div>` : ''}</article>
-            <article class="card list pad-y0"><div class="li-h"><h2 class="h2">Klasifikasi zona bahaya</h2><p class="muted sm">Zona BPBD (kelas bahaya) dan indeks InaRISK (0 – 1) · ketuk peta untuk melihat keduanya</p></div>
+            <article class="card list pad-y0 zone-card"><div class="li-h"><h2 class="h2">Klasifikasi zona bahaya</h2><p class="muted sm">Zona BPBD (kelas bahaya) dan indeks InaRISK (0 – 1) · ketuk peta untuk melihat keduanya</p></div>
               ${C.zoneIndex.map(z => `<div class="li ai-c"><i class="zsw z-${z.key}"></i><div class="grow"><strong class="sm">${z.label}</strong><p class="sub sm">Indeks ${z.range}</p></div><span class="muted sm" data-zc="${z.key}"></span></div>`).join('')}</article>
-            ${live ? `<article class="card" id="z-src"><div class="row-c"><span class="c-pri">${I('db', 18)}</span><h2 class="h2">Sumber data zona</h2></div><p class="sub sm" id="z-src-t">Memuat…</p></article>` : ''}
+            ${live ? `<article class="card" id="z-src"><div class="row-c"><span class="c-pri">${I('db', 18)}</span><h2 class="h2">Sumber data zona</h2></div><p class="sub sm clamp4" id="z-src-t">Memuat…</p></article>` : ''}
             <article class="card sensor-card">
               <div class="row-c"><span class="badge lg" id="p-ic">${I('pin', 20)}</span><div class="grow"><p class="muted sm">Sensor terpilih</p><h2 class="h2">${esc(C.sensorName)}</h2></div><span id="p-pill"></span></div>
               <p class="sub sm">${esc(C.locationNote)}${live ? ` · ${M.sensor.lat.toFixed(5)}, ${M.sensor.lng.toFixed(5)}${M.sensorApprox ? ' (perkiraan)' : ''}` : ''}</p><p class="big-val" id="p-val"></p><p class="muted sm" id="p-upd"></p>
-              <a class="btn btn-pri" href="#grafik">${I('chart', 16)}Lihat grafik sensor</a>
-              ${live ? `<a class="btn" href="${P.gmapsUrl(M.sensor.lat, M.sensor.lng)}" target="_blank" rel="noopener">${I('map', 16)}Buka di Google Maps</a>` : ''}</article>
+              <div class="btns"><a class="btn btn-pri" href="#grafik">${I('chart', 16)}Lihat grafik</a>
+              ${live ? `<a class="btn" href="${P.gmapsUrl(M.sensor.lat, M.sensor.lng)}" target="_blank" rel="noopener">${I('map', 16)}Google Maps</a>` : ''}</div></article>
           </div>
         </div>`;
       ui.$('#l-zone').onchange = e => { this.zones = e.target.checked; this.lm ? this.lm.setZones(this.zones) : this.update(snapNow()); };
@@ -260,7 +296,7 @@
         </div>
         <div class="stats4" id="r-stats"></div>
         <p class="info">${I('info', 18)}Unduh data sesuai periode untuk pelaporan. Rekap rutin BPBD: Senin, Rabu, dan Jumat.</p>
-        <article class="card table-card"><div class="table-wrap"><table>
+        <article class="card table-card fill"><div class="table-wrap"><table>
           <thead><tr><th>Tanggal</th><th>Waktu</th><th>Ketinggian air</th><th>Status</th><th>Keterangan</th></tr></thead><tbody id="r-body"></tbody></table></div>
           <div class="pager row-sb"><span class="sub sm" id="r-info"></span><div class="pg" id="r-pg"></div></div></article>`;
       ui.$('#r-per').onchange = e => { this.hours = +e.target.value; this.page = 0; this.update(); };
@@ -268,7 +304,7 @@
       ui.$('#r-csv').onclick = () => this.csv();
       ui.$('#r-pdf').onclick = () => SB.laporanCetak.print(this.printOpts());
     },
-    update() {
+    update(_s, _e, again) {
       const s = D.stats(this.hours), evs = D.getEvents().filter(e => e.t >= Date.now() - this.hours * HOUR && S.rank(e.to) > S.rank(e.from));
       const nS = evs.filter(e => e.to === 'SIAGA').length, nB = evs.filter(e => e.to === 'BAHAYA').length;
       ui.$('#r-stats').innerHTML = [['db', 'pri', 'Total data tercatat', s.count.toLocaleString('id-ID'), 'pembacaan pada periode ini', ''],
@@ -290,7 +326,17 @@
       add(I('chev', 15), this.page + 1, this.page >= pages - 1);
       ui.$('#r-pg').innerHTML = btns.join('');
       ui.$$('#r-pg .pgb').forEach(b => b.onclick = () => { this.page = +b.dataset.p; this.update(); });
+      /* pas layar: jumlah baris per halaman = yang muat di kartu tabel */
+      const per = this.fitPer();
+      if (per !== this.per && !again) { const first = this.page * this.per; this.per = per; this.page = Math.floor(first / per); this.update(null, null, true); }
     },
+    fitPer() {
+      if (!isFit()) return 10;
+      const wrap = ui.$('.table-wrap'), head = ui.$('.table-wrap thead'), row = ui.$('#r-body tr');
+      const rh = row && !row.querySelector('[colspan]') ? row.offsetHeight : 41;
+      return Math.max(3, Math.floor((wrap.clientHeight - head.offsetHeight) / Math.max(30, rh)));
+    },
+    relayout() { this.update(); },
     printOpts() { return { hours: this.hours, label: RANGES.find(r => r[0] === this.hours)[1], status: this.status, rows: this.rows() }; },
     csv() {
       const rows = this.rows();
@@ -312,13 +358,13 @@
     target: 'SIAGA',
     render() {
       main.innerHTML = `${topbar('Kirim imbauan', 'Pesan singkat dari BPBD yang tampil di web warga')}
-        <div class="cols">
+        <div class="cols fill">
           <form class="card form" id="f" novalidate>
             <div class="row-c"><span class="badge b-pri lg">${I('mega', 18)}</span><h2 class="h2 lg">Buat imbauan baru</h2></div>
             <label class="fl"><span>Judul imbauan</span><input id="f-judul" maxlength="60" placeholder="Contoh: Amankan dokumen penting"></label>
             <div class="fl"><span>Tampilkan saat status</span>
               <div class="opt3" role="group" aria-label="Tampilkan saat status">${[['SEMUA', 'Semua status', ''], ['SIAGA', 'Siaga', 'wr'], ['BAHAYA', 'Bahaya', 'dg']].map(([k, l, c]) => `<button type="button" data-t="${k}" class="opt ${c ? 'opt-' + c : ''}" aria-pressed="${k === this.target}">${c ? `<i class="dot bg-${c}"></i>` : ''}${l}</button>`).join('')}</div></div>
-            <label class="fl"><span class="row-sb">Isi pesan<em class="muted" id="f-count">0 / 160 karakter</em></span><textarea id="f-isi" maxlength="160" rows="4" placeholder="Tulis pesan singkat dan jelas untuk warga"></textarea></label>
+            <label class="fl fl-grow"><span class="row-sb">Isi pesan<em class="muted" id="f-count">0 / 160 karakter</em></span><textarea id="f-isi" maxlength="160" rows="4" placeholder="Tulis pesan singkat dan jelas untuk warga"></textarea></label>
             <div class="fl"><span>Template cepat</span><div class="tpl">${TEMPLATES.map((t, i) => `<button type="button" class="chip-tpl" data-i="${i}">${I('plus', 13)}${t[0]}</button>`).join('')}</div></div>
             <label class="check"><input type="checkbox" id="f-push" checked><span class="box">${I('tick', 14)}</span>Kirim juga sebagai notifikasi ke HP warga</label>
             <label class="check"><input type="checkbox" id="f-ber" checked><span class="box">${I('tick', 14)}</span>Tampilkan di Beranda warga</label>
@@ -328,7 +374,7 @@
           <div class="col-side">
             <article class="card soft"><div class="row-c"><span class="sub">${I('eye', 17)}</span><h2 class="h2">Pratinjau di web warga</h2></div>
               <div class="imbauan" id="pv"></div><p class="muted sm" id="pv-s"></p></article>
-            <article class="card list pad-y0"><div class="row-sb li-h"><h2 class="h2">Riwayat imbauan</h2></div><div id="hist"></div></article>
+            <article class="card list pad-y0 grow-card"><div class="row-sb li-h"><h2 class="h2">Riwayat imbauan</h2><span class="muted sm" id="hist-more"></span></div><div id="hist" class="fit-list list"></div></article>
           </div>
         </div>`;
       const judul = ui.$('#f-judul'), isi = ui.$('#f-isi');
@@ -362,15 +408,18 @@
       preview(); this.paintHist();
     },
     paintHist() {
-      ui.$('#hist').innerHTML = SB.imbauan.all().slice(0, 6).map(i => `<div class="li ai-c"><div class="grow"><strong class="sm">${esc(i.judul)}</strong><p class="muted sm">${i.status === 'DRAF' ? 'Belum dikirim' : F.dayLabel(i.t) + ' · ' + F.time(i.t)}</p></div>${i.status === 'DRAF' ? ui.tag('DRAF', 'mute') : ui.tag('TERKIRIM', 'ok')}</div>`).join('');
+      ui.$('#hist').innerHTML = SB.imbauan.all().slice(0, isFit() ? 30 : 6).map(i => `<div class="li ai-c"><div class="grow"><strong class="sm">${esc(i.judul)}</strong><p class="muted sm">${i.status === 'DRAF' ? 'Belum dikirim' : F.dayLabel(i.t) + ' · ' + F.time(i.t)}</p></div>${i.status === 'DRAF' ? ui.tag('DRAF', 'mute') : ui.tag('TERKIRIM', 'ok')}</div>`).join('')
+        || '<p class="empty-s">Belum ada imbauan.</p>';
+      fitList(ui.$('#hist'), ui.$('#hist-more'));
     },
+    relayout() { this.paintHist(); },
     update() {}
   };
 
   /* ================= NOTIFIKASI ================= */
   /* Satu hari per tampilan (default hari ini); daftar bergulir di dalam kartu, layar utama tetap diam */
   const notifikasi = {
-    filter: 'SEMUA', q: '', day: null, lock: true,
+    filter: 'SEMUA', q: '', day: null, lock: true, page: 0, per: 50,
     render() {
       main.innerHTML = `${topbar('Notifikasi', 'Riwayat perubahan status dan imbauan yang terkirim')}
         <div class="toolbar n-tools">
@@ -381,8 +430,11 @@
           <button type="button" class="btn" id="n-read" aria-label="Tandai semua dibaca">${I('checks', 16)}<span class="bl">Tandai semua dibaca</span></button>
           <button type="button" class="btn n-set-btn" id="n-set" aria-expanded="false" aria-controls="n-side" aria-label="Pengaturan notifikasi">${I('sliders', 16)}<span class="bl">Pengaturan</span></button>
         </div>
-        <div class="cols n-cols" id="n-cols">
-          <article class="card list pad-y0 feed-d scroll-card" id="n-list" tabindex="0" aria-label="Daftar notifikasi"></article>
+        <div class="cols n-cols fill" id="n-cols">
+          <article class="card list pad-y0 feed-d n-list" id="n-list" tabindex="0" aria-label="Daftar notifikasi">
+            <div class="fit-list list" id="n-items"></div>
+            <div class="n-pager"><span class="sub sm" id="n-info"></span><div class="pg"><button type="button" class="pgb" id="n-prev" aria-label="Halaman sebelumnya">${I('back', 15)}</button><button type="button" class="pgb" id="n-next" aria-label="Halaman berikutnya">${I('chev', 15)}</button></div></div>
+          </article>
           <div class="col-side n-side" id="n-side">
             <div class="row-sb sheet-h"><h2 class="h2 lg">Pengaturan</h2><button type="button" class="icon-x" id="n-close" aria-label="Tutup pengaturan">${I('x', 20)}</button></div>
             <article class="card"><div class="row-c"><span class="c-pri">${I('sliders', 18)}</span><h2 class="h2">Pengaturan notifikasi</h2></div>
@@ -405,8 +457,12 @@
       const sheet = open => { ui.$('#n-cols').classList.toggle('show-set', open); ui.$('#n-set').setAttribute('aria-expanded', String(open)); };
       ui.$('#n-set').onclick = () => sheet(!ui.$('#n-cols').classList.contains('show-set'));
       ui.$('#n-close').onclick = ui.$('#n-bd').onclick = () => sheet(false);
+      ui.$('#n-prev').onclick = () => { this.page--; this.paint(); };
+      ui.$('#n-next').onclick = () => { this.page++; this.paint(); };
+      ui.$('#n-list').classList.toggle('scroll-card', !isFit());
       perm(); this.paint(true);
     },
+    relayout() { ui.$('#n-list').classList.toggle('scroll-card', !isFit()); this.per = 50; this.paint(); },
     paint(top) {
       const read = lastRead(), [from, to] = this.dp.range();
       const all = feed().filter(i => i.t >= from && i.t < to);
@@ -415,12 +471,24 @@
       ui.$('#n-chips').innerHTML = chips.map(([k, l, c]) => `<button type="button" class="chip" data-f="${k}" aria-pressed="${k === this.filter}">${c ? `<i class="dot bg-${c}"></i>` : ''}${l}<em>${counts[k] || 0}</em></button>`).join('');
       ui.$$('#n-chips .chip').forEach(b => b.onclick = () => { this.filter = b.dataset.f; this.paint(true); });
       const items = all.filter(i => (this.filter === 'SEMUA' || i.kind === this.filter) && (!this.q || (i.title + ' ' + i.desc).toLowerCase().includes(this.q)));
-      const box = ui.$('#n-list');
-      box.innerHTML = items.length ? items.map(i => `
+      if (top) this.page = 0;
+      const box = ui.$('#n-items'), fit = isFit();
+      /* pas layar: berhalaman sebanyak baris yang muat; selain itu satu daftar bergulir */
+      const per = fit ? this.per : items.length || 1, pages = Math.max(1, Math.ceil(items.length / per));
+      this.page = Math.max(0, Math.min(this.page, pages - 1));
+      const slice = fit ? items.slice(this.page * per, this.page * per + per) : items;
+      box.innerHTML = slice.length ? slice.map(i => `
         <div class="li ai-c nrow${i.t > read ? ' unread' : ''}"><span class="badge b-${i.cls} lg">${I(i.icon, 18)}</span>
           <div class="grow"><strong>${i.title}</strong>${i.t > read ? '<i class="u-dot" aria-label="belum dibaca"></i>' : ''}<p class="sub sm">${esc(i.desc)}</p></div>${i.pill}<span class="muted sm tm">${F.time(i.t)}</span></div>`).join('')
         : `<p class="empty">Tidak ada notifikasi ${all.length ? 'yang cocok ' : ''}pada ${this.dp.isToday() ? 'hari ini' : 'tanggal ini'}.</p>`;
-      if (top) box.scrollTop = 0;
+      if (fit && slice.length) {
+        const n = fitList(box);
+        if (n > 0 && (n < slice.length || (this.per !== n && slice.length === this.per))) { this.per = Math.max(1, n); return this.paint(); }
+        const a = this.page * this.per;
+        ui.$('#n-info').textContent = `${a + 1}–${a + slice.length} dari ${items.length} notifikasi`;
+        ui.$('#n-prev').disabled = this.page === 0; ui.$('#n-next').disabled = this.page >= pages - 1;
+      } else ui.$('#n-info').textContent = '';
+      if (top) ui.$('#n-list').scrollTop = 0;
     },
     update(snap, extra) { if (extra && extra.changed && this.dp.isToday()) this.paint(); }
   };
@@ -452,7 +520,15 @@
   });
   SB.imbauan.subscribe(() => { paintBadge(); if (active === dashboard) dashboard.paintSide(); if (active === notifikasi) notifikasi.paint(); });
 
-  let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => active && active.update(snapNow(), {}), 150); });
+  let rz; window.addEventListener('resize', () => {
+    clearTimeout(rz);
+    rz = setTimeout(() => {
+      const was = isFit(); fitScreen();
+      if (!active) return;
+      if (was !== isFit() && active !== peta) { active.render(); active.update(snapNow(), {}); return; }
+      if (active.relayout) active.relayout(); else active.update(snapNow(), {});
+    }, 150);
+  });
   /* kotak sumber data di sidebar */
   if (!sim) { const b = ui.$('#src-box'); b.className = 'src live'; b.innerHTML = `<b>${I('wifi', 14)}Sensor terhubung</b>Via Firebase Realtime Database`; }
   paintBadge();

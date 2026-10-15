@@ -124,7 +124,7 @@
     setInterval(tick, C.simulator.intervalMs);
 
     const api = {
-      kind: 'simulasi',
+      kind: 'simulasi', now: () => Date.now(),
       ready: Promise.resolve(),
       getLatency: () => null,
       isConnected: () => true,
@@ -245,7 +245,7 @@
       .catch(err => { console.warn(err.message); resolveReady(); emit({ error: err.message }); });
 
     const api = {
-      kind: 'firebase', ready, app: appReady,
+      kind: 'firebase', ready, app: appReady, now: serverNow,   // waktu server (jam perangkat bisa selisih)
       subscribe(fn) { subs.add(fn); fn(snapshot(), {}); return () => subs.delete(fn); },
       getCurrent: () => current,
       getStatus: () => status,

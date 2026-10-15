@@ -68,6 +68,14 @@
   SB.chart = function (el, points, opts) {
     el._sb = { points, opts };
     render(el);
+    /* gambar ulang bila ukuran wadah berubah (mis. tata letak pas-layar menyesuaikan setelah isi lain dimuat) */
+    if (!el._sbRO && window.ResizeObserver) {
+      el._sbRO = new ResizeObserver(() => {
+        const z = el._sbSize, w = Math.round(el.clientWidth), h = Math.round(el.clientHeight);
+        if (z && (Math.abs(z[0] - w) > 1 || Math.abs(z[1] - h) > 1) && !el._sbRaf) el._sbRaf = requestAnimationFrame(() => { el._sbRaf = 0; render(el); });
+      });
+      el._sbRO.observe(el);
+    }
   };
 
   function render(el) {
@@ -75,8 +83,12 @@
     const o = Object.assign({ compact: false, labels: true, ticks: 5, hover: true, nowLabel: false }, opts || {});
     const C = SB.config, th = C.thresholds, u = C.unit, F = SB.fmt;
     const all = (points || []).filter(p => p && isFinite(p.t) && isFinite(p.v));
-    const now = Date.now();
-    const b1 = o.to != null ? o.to : o.hours ? now : all.length ? all[all.length - 1].t : now;
+    /* "kini" memakai waktu server Firebase; jam perangkat bisa beberapa detik di belakang cap waktu alat.
+       Tanpa ini pembacaan terbaru dianggap "masa depan", jatuh di luar sumbu, dan penanda live hilang. */
+    const lastT = all.length ? all[all.length - 1].t : 0;
+    let now = SB.data && SB.data.now ? SB.data.now() : Date.now();
+    if (lastT > now && lastT - now < 10 * MIN) now = lastT;
+    const b1 = o.to != null ? o.to : o.hours ? now : all.length ? lastT : now;
     const b0 = o.from != null ? o.from : o.hours ? b1 - o.hours * HOUR : all.length ? all[0].t : b1 - DAY;
     const interactive = o.hover && !o.compact;
 
@@ -96,6 +108,7 @@
 
     const W = Math.max(200, Math.round(el.clientWidth || 600));
     const H = Math.max(60, Math.round(el.clientHeight || 200));
+    el._sbSize = [Math.round(el.clientWidth), Math.round(el.clientHeight)];
     const pad = o.compact ? { l: 2, r: 8, t: 10, b: 4 } : { l: 12, r: 44, t: 30, b: 26 };
     const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b, yMax = C.maxLevel;
     const X = t => pad.l + ((Math.min(Math.max(t, t0), t1) - t0) / span) * iw;
