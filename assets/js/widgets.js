@@ -74,27 +74,31 @@
     const permission = () => ('Notification' in window ? Notification.permission : 'unsupported');
     async function request() {
       if (!('Notification' in window)) return 'unsupported';
-      try { return await Notification.requestPermission(); } catch (e) { return Notification.permission; }
+      let r;
+      try { r = await Notification.requestPermission(); } catch (e) { r = Notification.permission; }
+      /* izin diberikan: daftarkan perangkat untuk push (tetap menerima peringatan saat browser ditutup) */
+      if (r === 'granted' && SB.push && SB.push.available()) SB.push.enable().catch(err => console.warn('Push:', err.message));
+      return r;
     }
     /* Notifikasi sistem hanya saat halaman tidak sedang dilihat. Versi Firebase Cloud Messaging
        (tetap muncul saat browser ditutup) dikerjakan pada tahap integrasi. */
-    function system(title, body) {
+    function system(title, body, tag) {
       if (permission() !== 'granted' || document.visibilityState === 'visible') return;
-      try { new Notification(title, { body, tag: 'siagabanjir', renotify: true }); } catch (e) { /* perlu service worker di sebagian HP */ }
+      try { new Notification(title, { body, tag: tag || 'siagabanjir', renotify: true }); } catch (e) { /* perlu service worker di sebagian HP */ }
     }
 
     function alertStatus(ev) {
       const up = SB.status.rank(ev.to) > SB.status.rank(ev.from);
-      const title = up ? `Peringatan ${ev.to}` : `Status turun ke ${ev.to}`;
-      const tail = ev.to === 'BAHAYA' ? ' Segera menuju titik kumpul terdekat.' : ev.to === 'SIAGA' ? ' Tetap waspada.' : '';
-      const body = `Ketinggian air ${C.locationLabel} mencapai ${SB.fmt.level(ev.level)}.${tail}`;
+      const title = up ? (ev.to === 'BAHAYA' ? 'Peringatan BAHAYA' : `Status ${ev.to}`) : `Status turun ke ${ev.to}`;
+      const tail = ev.to === 'BAHAYA' ? ' Segera lakukan evakuasi ke titik kumpul terdekat.' : ev.to === 'SIAGA' ? ' Tetap waspada.' : '';
+      const body = `Ketinggian air ${String(C.locationLabel).split(',')[0]} mencapai ${SB.fmt.level(ev.level)}.${tail}`;
       toast({ title, body, cls: SB.status.cls(ev.to), icon: SB.status.icon(ev.to) });
-      system(title, body);
+      system(title, body, 'siagabanjir-' + ev.to);
       if (up && ev.to !== 'AMAN') { beep(ev.to); vibrate(ev.to); }
     }
     function alertImbauan(item) {
       toast({ title: 'Imbauan BPBD', body: item.isi, cls: 'pri', icon: 'mega', duration: 9000 });
-      system('Imbauan BPBD', item.isi);
+      system('Imbauan BPBD', item.isi, 'siagabanjir-imbauan');
     }
     return { toast, request, permission, alertStatus, alertImbauan, soundOn };
   })();
