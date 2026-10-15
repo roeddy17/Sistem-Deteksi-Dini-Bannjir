@@ -399,3 +399,8 @@ body.fit .map-legend em { margin-left: auto; padding-left: 10px; font-style: nor
 body.fit .zone-card { display: none; }
 body.fit .map-cols .sensor-card { order: -1; }
 body.fit-narrow .chip-time { display: none; }
+
+/* cetak/simpan PDF: lepaskan kunci satu-layar agar laporan mengalir ke banyak halaman */
+@media print {
+  html:has(body.fit), body.bpbd.fit, body.bpbd.lock { overflow: visible !important; height: auto !important; }
+}
