@@ -1,0 +1,21 @@
+{
+  "rules": {
+    "sensor": {
+      ".read": true,
+      ".write": false
+    },
+    "imbauan": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "fcmTokens": {
+      ".read": false,
+      "$token": {
+        ".write": "newData.exists()",
+        ".validate": "$token.length > 80 && $token.length < 400 && newData.hasChildren(['t'])",
+        "t": { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}
