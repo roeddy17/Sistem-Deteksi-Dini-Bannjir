@@ -1,4 +1,5 @@
 # SiagaBanjir — Implementasi Antarmuka Web
+Dikembangkan oleh Safrudin Lambae, Ilmu Komputer, Universitas Muhammadiyah Papua.
 
 Implementasi antarmuka web untuk **Prototype Sistem Deteksi Dini Banjir Berbasis IoT** (tahap *Design Solutions*, metode UCD).
 Dibangun dengan HTML, CSS, dan JavaScript tanpa framework, mengikuti mockup dan Design System di Figma.
