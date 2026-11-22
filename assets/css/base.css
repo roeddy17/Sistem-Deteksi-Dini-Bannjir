@@ -262,3 +262,9 @@ button { cursor: pointer; }
 .ch-slide { animation: ch-slide .45s cubic-bezier(.2, .8, .2, 1); }
 @keyframes ch-slide { from { transform: translateY(var(--dy)); } }
 @media (prefers-reduced-motion: reduce) { .ch-pulse, .ch-slide { animation: none; } }
+
+/* Ajakan mengaktifkan bunyi peringatan (browser melarang suara sebelum halaman disentuh) */
+.sound-gate { position: fixed; z-index: 3000; left: 16px; right: 16px; margin: 0 auto; width: max-content; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 10px; max-width: calc(100vw - 32px); padding: 10px 16px; border: 0; border-radius: 14px; background: var(--pri); color: #fff; box-shadow: 0 8px 24px rgba(15, 23, 42, .25); text-align: left; font: inherit; cursor: pointer; }
+.sound-gate span { display: flex; flex-direction: column; line-height: 1.25; }
+.sound-gate strong { font-size: 14px; white-space: nowrap; }
+.sound-gate small { font-size: 12px; opacity: .9; }

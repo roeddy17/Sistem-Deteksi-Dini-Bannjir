@@ -53,6 +53,21 @@
       }
     };
     ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev => window.addEventListener(ev, unlock, { passive: true }));
+    const audioReady = () => !!ctx && ctx.state === 'running';
+
+    /* Browser (Chrome, Safari, Android, laptop) melarang suara sebelum halaman pernah disentuh.
+       Di panel BPBD hal ini terpenuhi saat login; di web warga belum tentu, sehingga bunyi
+       Siaga/Bahaya diam. Tampilkan ajakan "Aktifkan bunyi" sampai pengguna menyentuh halaman. */
+    function soundGate() {
+      if (!soundOn() || audioReady() || document.getElementById('sound-gate')) return;
+      const el = document.createElement('button');
+      el.type = 'button'; el.id = 'sound-gate'; el.className = 'sound-gate';
+      el.innerHTML = `${I('vol', 18)}<span><strong>Aktifkan bunyi peringatan</strong><small>Ketuk agar Siaga dan Bahaya berbunyi</small></span>`;
+      const done = () => { unlock(); setTimeout(() => { if (audioReady() || primed) el.remove(); }, 150); };
+      el.addEventListener('click', done);
+      ['pointerdown', 'touchend', 'keydown'].forEach(ev => window.addEventListener(ev, () => setTimeout(() => { if (primed) el.remove(); }, 150), { passive: true }));
+      document.body.appendChild(el);
+    }
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
     });
@@ -116,7 +131,7 @@
       toast({ title: 'Imbauan BPBD', body: item.isi, cls: 'pri', icon: 'mega', duration: 9000 });
       system('Imbauan BPBD', item.isi, 'siagabanjir-imbauan');
     }
-    return { toast, request, permission, alertStatus, alertImbauan, soundOn };
+    return { toast, request, permission, alertStatus, alertImbauan, soundOn, soundGate, audioReady };
   })();
 
   /* ---------- Pemilih hari: ‹ [kalender · Hari ini] › ----------

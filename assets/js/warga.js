@@ -409,6 +409,9 @@
   window.addEventListener('offline', () => setOffline(true));
   window.addEventListener('online', () => setOffline(false));
   if (offline) setOffline(true);
+
+  /* bunyi Siaga/Bahaya perlu satu sentuhan dulu (aturan browser) */
+  setTimeout(() => SB.notify.soundGate(), 1200);
   ui.$('#retry').onclick = () => setOffline(!navigator.onLine);
 
   /* Gambar ulang grafik saat ukuran layar berubah */
