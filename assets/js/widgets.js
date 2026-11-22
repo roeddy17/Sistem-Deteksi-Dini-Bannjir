@@ -35,18 +35,34 @@
 
   /* ---------- Notifikasi ---------- */
   SB.notify = (function () {
-    let ctx = null;
+    let ctx = null, primed = false;
+    /* iPhone/Safari: audio baru boleh berbunyi setelah ada sentuhan "sungguhan" (touchend/click,
+       bukan pointerdown), dan harus ada suara yang diputar di dalam sentuhan itu. Setelah
+       aplikasi masuk latar belakang, statusnya bisa "interrupted", jadi dibangunkan lagi. */
     const unlock = () => {
       if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ctx = null; } }
-      if (ctx && ctx.state === 'suspended') ctx.resume();
+      if (!ctx) return;
+      /* iOS 17+: tetap berbunyi walau tombol senyap aktif */
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* tidak didukung */ }
+      if (ctx.state !== 'running') ctx.resume().catch(() => {});
+      if (!primed) {
+        try {   /* bunyi senyap 1 sampel untuk membuka kunci audio di iOS */
+          const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource();
+          s.buffer = b; s.connect(ctx.destination); s.start(0); primed = true;
+        } catch (e) { /* abaikan */ }
+      }
     };
-    ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, unlock, { passive: true }));
+    ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev => window.addEventListener(ev, unlock, { passive: true }));
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
+    });
 
-    const soundOn = () => localStorage.getItem('sb-sound') !== 'off';
+    const soundOn = () => { try { return localStorage.getItem('sb-sound') !== 'off'; } catch (e) { return true; } };
 
     /* Bunyi meniru buzzer prototipe: SIAGA = bip pendek berulang, BAHAYA = sirene naik-turun */
-    function beep(status) {
+    function beep(status, retry) {
       if (!ctx || !soundOn()) return;
+      if (ctx.state !== 'running') { if (!retry) ctx.resume().then(() => beep(status, true)).catch(() => {}); return; }
       const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
       o.connect(g); g.connect(ctx.destination); g.gain.value = 0.0001;
       if (status === 'SIAGA') {
